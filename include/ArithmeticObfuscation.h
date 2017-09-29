@@ -7,74 +7,92 @@
 using namespace llvm;
 
 /* Implemented in ArithmeticObfuscation/Add.cpp */
+/* NOTE: Obfuscates only add operation */
 class AddObfuscator {
-
-private:
-	/* declare multiple logics here */
-
 public:
-	/*
-	 * Obfuscates add operations
-	 * NOTE: This function selects random logics from the ones implemented above and applies on IR
-	 *
-	 * @param Function* to obfuscate
-	 * @return true if IR is modified, false otherwise
-	 **/
-	static bool obfuscate(Function *F);
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Function *F);
+    
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(BasicBlock *BB);
 
+    /*
+     * NOTE: Detatches instruction from the block (parent)
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/Sub.cpp */
+/* NOTE: Obfuscates only sub operation */
 class SubObfuscator {
 
-private:
-	/* declare multiple logics here */
-
 public:
-	/*
-	 * Obfuscates sub operations
-	 * NOTE: This function selects random logics from the ones implemented above and applies on IR
-	 *
-	 * @param Function* to obfuscate
-	 * @return true if IR is modified, false otherwise
-	 **/
-	static bool obfuscate(Function *F);
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Function *F);
+    
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(BasicBlock *BB);
+
+    /*
+     * NOTE: Detatches instruction from the block (parent)
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Instruction *I);
 
 };
 
 /* Implemented in ArithmeticObfuscation/Mul.cpp */
+/* NOTE: Obfuscates only mul operation */
 class MulObfuscator {
 
-private:
-	/* declare multiple logics here */
-
 public:
-	/*
-	 * Obfuscates mul operations
-	 * NOTE: This function selects random logics from the ones implemented above and applies on IR
-	 *
-	 * @param Function* to obfuscate
-	 * @return true if IR is modified, false otherwise
-	 **/
-	static bool obfuscate(Function *F);
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Function *F);
+    
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(BasicBlock *BB);
+
+    /*
+     * NOTE: Detatches instruction from the block (parent)
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Instruction *I);
 
 };
 
 /* Implemented in ArithmeticObfuscation/Div.cpp */
+/* NOTE: Obfuscates only div operation */
 class DivObfuscator {
 
-private:
-	/* declare multiple logics here */
-
 public:
-	/*
-	 * Obfuscates div operations
-	 * NOTE: This function selects random logics from the ones implemented above and applies on IR
-	 *
-	 * @param Function* to obfuscate
-	 * @return true if IR is modified, false otherwise
-	 **/
-	static bool obfuscate(Function *F);
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Function *F);
+    
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(BasicBlock *BB);
+
+    /*
+     * NOTE: Detatches instruction from the block (parent)
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Instruction *I);
 
 };
 
