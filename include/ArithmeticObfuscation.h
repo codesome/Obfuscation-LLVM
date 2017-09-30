@@ -21,7 +21,8 @@ public:
     static bool obfuscate(BasicBlock *BB);
 
     /*
-     * NOTE: Detatches instruction from the block (parent)
+     * NOTE: Does not remove or erase the instruction from the block
+     *       But changes all the uses. Need to erase it manually.
      * @return true if IR is modified, false otherwise
      **/
     static bool obfuscate(Instruction *I);
@@ -43,7 +44,8 @@ public:
     static bool obfuscate(BasicBlock *BB);
 
     /*
-     * NOTE: Detatches instruction from the block (parent)
+     * NOTE: Does not remove or erase the instruction from the block
+     *       But changes all the uses. Need to erase it manually.
      * @return true if IR is modified, false otherwise
      **/
     static bool obfuscate(Instruction *I);
@@ -66,7 +68,8 @@ public:
     static bool obfuscate(BasicBlock *BB);
 
     /*
-     * NOTE: Detatches instruction from the block (parent)
+     * NOTE: Does not remove or erase the instruction from the block
+     *       But changes all the uses. Need to erase it manually.
      * @return true if IR is modified, false otherwise
      **/
     static bool obfuscate(Instruction *I);
@@ -89,7 +92,8 @@ public:
     static bool obfuscate(BasicBlock *BB);
 
     /*
-     * NOTE: Detatches instruction from the block (parent)
+     * NOTE: Does not remove or erase the instruction from the block
+     *       But changes all the uses. Need to erase it manually.
      * @return true if IR is modified, false otherwise
      **/
     static bool obfuscate(Instruction *I);
