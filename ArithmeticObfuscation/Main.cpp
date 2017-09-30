@@ -8,10 +8,10 @@ using namespace llvm;
 bool ArithmeticObfuscation::runOnFunction(Function &F) {
     bool modified = false;
     // TODO: decide the order and number of times to run obfuscate functions
-    modified = modified || AddObfuscator::obfuscate(&F);
-    modified = modified || SubObfuscator::obfuscate(&F);
-    modified = modified || MulObfuscator::obfuscate(&F);
-    modified = modified || DivObfuscator::obfuscate(&F);
+    modified = SubObfuscator::obfuscate(&F) || modified;
+    modified = AddObfuscator::obfuscate(&F) || modified;
+    modified = MulObfuscator::obfuscate(&F) || modified;
+    modified = DivObfuscator::obfuscate(&F) || modified;
     
     return modified;
 }

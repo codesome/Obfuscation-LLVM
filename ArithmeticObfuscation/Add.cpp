@@ -1,6 +1,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Debug.h"
 #include "ArithmeticObfuscation.h"
 using namespace llvm;
 
