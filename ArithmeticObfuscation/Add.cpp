@@ -1,8 +1,6 @@
 #include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "ArithmeticObfuscation.h"
 using namespace llvm;
 
@@ -42,10 +40,14 @@ bool AddObfuscator::obfuscate(Instruction *I) {
     Value* b = I->getOperand(1);
 
     IRBuilder<> Builder(I);
+    // a ^ b
     Value* v_xor = Builder.CreateXor(a, b);
+    // a & b
     Value* v_and = Builder.CreateAnd(a, b);
     Value* two = ConstantInt::get(type, 2);
+    // 2 * (a & b)
     Value* v_mul = Builder.CreateMul(two, v_and);
+    // (a ^ b) + 2 * (a & b)
     Value* final = Builder.CreateAdd(v_xor, v_mul);
 
     I->replaceAllUsesWith(final);
