@@ -18,6 +18,7 @@ bool obfuscate(Instruction *I) {
         case (Instruction::Sub):
             return SubObfuscator::obfuscate(I);
         case (Instruction::SDiv):
+            return SubObfuscator::obfuscate(I);
         case (Instruction::UDiv):
             return DivObfuscator::obfuscate(I);
         case (Instruction::Mul):

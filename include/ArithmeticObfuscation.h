@@ -100,6 +100,27 @@ public:
 
 };
 
+class SDivObfuscator {
+
+public:
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Function *F);
+    
+    /*
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(BasicBlock *BB);
+
+    /*
+     * NOTE: Does not remove or erase the instruction from the block
+     *       But changes all the uses. Need to erase it manually.
+     * @return true if IR is modified, false otherwise
+     **/
+    static bool obfuscate(Instruction *I);
+
+};
 
 class ArithmeticObfuscation : public FunctionPass {
 

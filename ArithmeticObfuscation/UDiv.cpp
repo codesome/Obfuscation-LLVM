@@ -41,14 +41,9 @@ bool DivObfuscator::obfuscate(Instruction *I) {
 
     IRBuilder<> Builder(I);
 
-    // Dividend / Divisor
-    Value *Quotient  = Builder.CreateUDiv(Dividend, Divisor);
 
-    // Divisor * Quotient
-    Value *Product   = Builder.CreateMul(Divisor, Quotient);
-
-    // Reminder = Dividend - Divisor * Quotient
-    Value *Remainder = Builder.CreateSub(Dividend, Product);
+    // Reminder = Dividend % divisor
+    Value *Remainder = Builder.CreateURem(Dividend, Divisor);
 
     Value* minusone = ConstantInt::get(type, -1);
     Value *minusRemainder = Builder.CreateMul(Remainder, minusone);
