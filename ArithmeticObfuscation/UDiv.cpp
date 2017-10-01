@@ -3,7 +3,7 @@
 #include "ArithmeticObfuscation.h"
 using namespace llvm;
 
-bool DivObfuscator::obfuscate(Function *F) {
+bool UDivObfuscator::obfuscate(Function *F) {
     bool modified = false;
     for(BasicBlock &BB : *F) {
         modified = obfuscate(&BB) || modified;        
@@ -11,7 +11,7 @@ bool DivObfuscator::obfuscate(Function *F) {
     return modified;
 }
 
-bool DivObfuscator::obfuscate(BasicBlock *BB) {
+bool UDivObfuscator::obfuscate(BasicBlock *BB) {
     bool modified = false;
     std::vector<Instruction *> toErase;
     for(Instruction &I : *BB) {
@@ -27,7 +27,7 @@ bool DivObfuscator::obfuscate(BasicBlock *BB) {
     return modified;
 }
 
-bool DivObfuscator::obfuscate(Instruction *I) {
+bool UDivObfuscator::obfuscate(Instruction *I) {
      if(I->getOpcode() != Instruction::UDiv)
         return false;
 

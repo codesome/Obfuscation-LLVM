@@ -28,7 +28,7 @@ bool SDivObfuscator::obfuscate(BasicBlock *BB) {
 }
 
 bool SDivObfuscator::obfuscate(Instruction *I) {
-     if(I->getOpcode() != Instruction::UDiv)
+     if(I->getOpcode() != Instruction::SDiv)
         return false;
 
     Type* type = I->getType();

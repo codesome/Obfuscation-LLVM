@@ -78,7 +78,7 @@ public:
 
 /* Implemented in ArithmeticObfuscation/Div.cpp */
 /* NOTE: Obfuscates only div operation */
-class DivObfuscator {
+class UDivObfuscator {
 
 public:
     /*
