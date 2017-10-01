@@ -4,7 +4,7 @@
 using namespace llvm;
 
 bool DivObfuscator::obfuscate(Function *F) {
-	bool modified = false;
+    bool modified = false;
     for(BasicBlock &BB : *F) {
         modified = obfuscate(&BB) || modified;        
     }
@@ -12,7 +12,7 @@ bool DivObfuscator::obfuscate(Function *F) {
 }
 
 bool DivObfuscator::obfuscate(BasicBlock *BB) {
-	bool modified = false;
+    bool modified = false;
     std::vector<Instruction *> toErase;
     for(Instruction &I : *BB) {
         if(obfuscate(&I)) {
@@ -28,5 +28,37 @@ bool DivObfuscator::obfuscate(BasicBlock *BB) {
 }
 
 bool DivObfuscator::obfuscate(Instruction *I) {
-    return false;
+     if(I->getOpcode() != Instruction::UDiv)
+        return false;
+
+    Type* type = I->getType();
+    if(!type->isIntegerTy())
+        return false;
+
+    // Getting Dividend and Divisor 
+    Value* Dividend = I->getOperand(0);
+    Value* Divisor = I->getOperand(1);
+
+    IRBuilder<> Builder(I);
+
+    // Dividend / Divisor
+    Value *Quotient  = Builder.CreateUDiv(Dividend, Divisor);
+
+    // Divisor * Quotient
+    Value *Product   = Builder.CreateMul(Divisor, Quotient);
+
+    // Reminder = Dividend - Divisor * Quotient
+    Value *Remainder = Builder.CreateSub(Dividend, Product);
+
+    Value* minusone = ConstantInt::get(type, -1);
+    Value *minusRemainder = Builder.CreateMul(Remainder, minusone);
+
+    // Dividend - Remainder 
+    Value *numerator = Builder.CreateAdd(Dividend,minusRemainder);
+
+    // (Dividend - Remainder)/Divisor
+    Value* final = Builder.CreateUDiv(numerator,Divisor);
+
+    I->replaceAllUsesWith(final);
+    return true;
 }
