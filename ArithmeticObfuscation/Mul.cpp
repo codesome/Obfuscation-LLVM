@@ -6,8 +6,12 @@ using namespace llvm;
 
 bool MulObfuscator::obfuscate(Function *F) {
 	bool modified = false;
+	std::vector<BasicBlock*> toIterate;
     for(BasicBlock &BB : *F) {
-        modified = obfuscate(&BB) || modified;
+        toIterate.push_back(&BB);
+    }
+    for(BasicBlock *BB : toIterate) {
+        modified = obfuscate(BB) || modified;
     }
     return modified;
 }
