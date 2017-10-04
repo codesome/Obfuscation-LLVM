@@ -1,8 +1,7 @@
 #include "ArithmeticObfuscation.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instruction.h"
-#include <cmath>
+
 using namespace llvm;
 
 bool MulObfuscator::obfuscate(Function *F) {
