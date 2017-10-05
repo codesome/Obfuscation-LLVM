@@ -2,6 +2,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "IndirectAccess.h"
@@ -26,8 +27,10 @@ void splitInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     // Splitting only if it doesnt have nested loop
     if(nestedLoops.size() <= 0) {
         int tripCount = 1;
-        LoopSplitInfo LSI = LoopSplit::splitAndCreateArray(L, tripCount, LI, DT);
-        UpdateAccess::updateIndirectAccess(&LSI);
+        if(CheckLegality::isLegalTransform(L)) {
+            LoopSplitInfo LSI = LoopSplit::splitAndCreateArray(L, tripCount, LI, DT);
+            UpdateAccess::updateIndirectAccess(&LSI);
+        }
     }
 }
 
@@ -38,7 +41,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    
+
     // Iterating only on original loops and not the ones created
     std::vector<Loop*> loops;
     for (Loop *L : LI) {

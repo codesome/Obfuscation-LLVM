@@ -21,6 +21,15 @@ struct LoopSplitInfo {
     // this is that value which is used for iterating 
     // for indirect access
     Value* tripCountValue;
+
+    LoopSplitInfo(Loop* clonedLoop, Value* arrayValue, Value* tripCountValue):
+    clonedLoop(clonedLoop), arrayValue(arrayValue), tripCountValue(tripCountValue) {}
+};
+
+class CheckLegality {
+public:
+    // returns false if the transform will lead to illegal code, else true
+    static bool isLegalTransform(Loop *L);
 };
 
 class LoopSplit {

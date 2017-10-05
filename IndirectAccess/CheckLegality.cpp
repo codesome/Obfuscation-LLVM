@@ -2,6 +2,6 @@
 #include "IndirectAccess.h"
 using namespace llvm;
 
-void UpdateAccess::updateIndirectAccess(LoopSplitInfo* LSI) {
-
+bool CheckLegality::isLegalTransform(Loop *L) {
+	return true;
 }
