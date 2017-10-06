@@ -6,6 +6,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/LLVMContext.h"
 using namespace llvm;
 
 
@@ -22,8 +23,12 @@ struct LoopSplitInfo {
     // for indirect access
     Value* tripCountValue;
 
+    LoopSplitInfo(): clonedLoop(nullptr), arrayValue(nullptr), tripCountValue(nullptr) {}
+
     LoopSplitInfo(Loop* clonedLoop, Value* arrayValue, Value* tripCountValue):
-    clonedLoop(clonedLoop), arrayValue(arrayValue), tripCountValue(tripCountValue) {}
+        clonedLoop(clonedLoop), 
+        arrayValue(arrayValue), 
+        tripCountValue(tripCountValue) {}
 };
 
 class IndirectAccessUtils {
@@ -39,7 +44,8 @@ public:
      **/
     static bool isLegalTransform(Loop *L, Value* loopIterator);
 
-    static LoopSplitInfo splitAndCreateArray(Loop *L, int tripCount, LoopInfo *LI, DominatorTree *DT);
+    static LoopSplitInfo splitAndCreateArray(Loop *L, int tripCount, 
+        Value *loopIterator, LLVMContext *CTX, LoopInfo *LI, DominatorTree *DT, Function *F);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI);
 
