@@ -26,20 +26,23 @@ struct LoopSplitInfo {
     clonedLoop(clonedLoop), arrayValue(arrayValue), tripCountValue(tripCountValue) {}
 };
 
-class CheckLegality {
+class IndirectAccessUtils {
 public:
-    // returns false if the transform will lead to illegal code, else true
-    static bool isLegalTransform(Loop *L);
-};
+    /*
+     * Used to check for legality of indirect access of iterator
+     *
+     * @param Loop* L, the loop to check for legality
+     * @param Value* loopIterator, this should be empty. 
+     *      This will be populated with the loop iterator if result is legal
+     *
+     * @return true if its legal, else false
+     **/
+    static bool isLegalTransform(Loop *L, Value* loopIterator);
 
-class LoopSplit {
-public:
     static LoopSplitInfo splitAndCreateArray(Loop *L, int tripCount, LoopInfo *LI, DominatorTree *DT);
-};
 
-class UpdateAccess {
-public:
     static void updateIndirectAccess(LoopSplitInfo* LSI);
+
 };
 
 class IndirectAccess : public FunctionPass {

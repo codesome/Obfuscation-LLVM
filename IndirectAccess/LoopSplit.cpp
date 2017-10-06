@@ -3,6 +3,6 @@
 #include "IndirectAccess.h"
 using namespace llvm;
 
-LoopSplitInfo LoopSplit::splitAndCreateArray(Loop *L, int tripCount, LoopInfo *LI, DominatorTree *DT) {
+LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount, LoopInfo *LI, DominatorTree *DT) {
 	return LoopSplitInfo(nullptr,nullptr,nullptr);
 }

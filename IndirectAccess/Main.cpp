@@ -13,23 +13,24 @@ using namespace llvm;
 namespace {
 
 // Runs split on inner most loop
-void splitInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
+void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     // Stroing all the original loop pointes
     // Because after splitting the iteration gets affected due to new loops
     std::vector<Loop*> nestedLoops;
     for (Loop *NL : *L) {
         nestedLoops.push_back(NL);
     }
-    // Splitting the original loops
+    // Recursing over the original nested loops
     for (Loop *NL : nestedLoops) {
-        splitInnerMost(NL, LI, DT);
+        checkInnerMost(NL, LI, DT);
     }
-    // Splitting only if it doesnt have nested loop
+    // Splitting only if loop doesn't have nested loop
     if(nestedLoops.size() <= 0) {
-        int tripCount = 1;
-        if(CheckLegality::isLegalTransform(L)) {
-            LoopSplitInfo LSI = LoopSplit::splitAndCreateArray(L, tripCount, LI, DT);
-            UpdateAccess::updateIndirectAccess(&LSI);
+        int tripCount = 1; // TODO
+        Value* loopIterator;
+        if(IndirectAccessUtils::isLegalTransform(L, loopIterator)) {
+            LoopSplitInfo LSI = IndirectAccessUtils::splitAndCreateArray(L, tripCount, LI, DT);
+            IndirectAccessUtils::updateIndirectAccess(&LSI);
         }
     }
 }
@@ -50,12 +51,43 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     // Splitting the original loops in function
     for (Loop *L : loops) {
-        splitInnerMost(L, &LI, &DT);
+        checkInnerMost(L, &LI, &DT);
     }
 
     return modified;
 }
 
+/* Only for testing (by Ganesh).
+Dont uncomment or delete it. 
+It will be removed once its purpose is over */
+/*
+bool IndirectAccess::runOnFunction(Function &F) {
+    bool modified = true;
+    LoopSplitInfo LSI(nullptr,nullptr,nullptr);
+
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    for (Loop *L : LI) {
+        LSI.clonedLoop = L;
+        break;
+    }
+
+    BasicBlock &BB = F.getEntryBlock();
+    int cnt = 0;
+    for(Instruction &I: BB) {
+        cnt++;
+        if(cnt==4) {
+            LSI.arrayValue = &I;
+        }
+        if(cnt==5) {
+            LSI.tripCountValue = &I;
+        }
+    }
+
+    IndirectAccessUtils::updateIndirectAccess(&LSI);
+
+    return modified;
+}
+*/
 void IndirectAccess::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
