@@ -5,6 +5,8 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Transforms/Scalar.h"
 #include "IndirectAccess.h"
 using namespace llvm;
 
@@ -40,6 +42,10 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
 bool IndirectAccess::runOnFunction(Function &F) {
     bool modified = true;
 
+    legacy::FunctionPassManager FPM(F.getParent());
+    FPM.add(createPromoteMemoryToRegisterPass());
+    FPM.run(F);
+
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
@@ -58,7 +64,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 }
 
 /* Only for testing (by Ganesh).
-Dont uncomment or delete it. 
+Dont uncomment or delete it.
 It will be removed once its purpose is over */
 /*
 bool IndirectAccess::runOnFunction(Function &F) {
