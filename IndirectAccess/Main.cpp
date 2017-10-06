@@ -15,7 +15,7 @@ using namespace llvm;
 namespace {
 
 // Runs split on inner most loop
-void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
+void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE) {
     // Stroing all the original loop pointes
     // Because after splitting the iteration gets affected due to new loops
     std::vector<Loop*> nestedLoops;
@@ -24,13 +24,13 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     }
     // Recursing over the original nested loops
     for (Loop *NL : nestedLoops) {
-        checkInnerMost(NL, LI, DT);
+        checkInnerMost(NL, LI, DT, SE);
     }
     // Splitting only if loop doesn't have nested loop
     if(nestedLoops.size() <= 0) {
-        int tripCount = 1; // TODO
         Value* loopIterator;
         if(IndirectAccessUtils::isLegalTransform(L, loopIterator)) {
+            int tripCount = SE->getSmallConstantTripCount(L);
             LoopSplitInfo LSI = IndirectAccessUtils::splitAndCreateArray(L, tripCount, LI, DT);
             IndirectAccessUtils::updateIndirectAccess(&LSI);
         }
@@ -44,10 +44,15 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     legacy::FunctionPassManager FPM(F.getParent());
     FPM.add(createPromoteMemoryToRegisterPass());
+    // If we enable loop rotate here, ScalarEvolution is giving error
+    // Hence have -loop-rotate in command line before -indirect-access for now
+    // FPM.add(createLoopRotatePass());
+    // FPM.add(createLoopSimplifyPass());
     FPM.run(F);
 
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     // Iterating only on original loops and not the ones created
     std::vector<Loop*> loops;
@@ -57,7 +62,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     // Splitting the original loops in function
     for (Loop *L : loops) {
-        checkInnerMost(L, &LI, &DT);
+        checkInnerMost(L, &LI, &DT, &SE);
     }
 
     return modified;
@@ -97,6 +102,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 void IndirectAccess::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
 

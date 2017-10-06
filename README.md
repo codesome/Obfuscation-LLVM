@@ -22,4 +22,6 @@ Additional flag: `-arith-obfus-iter=N`, where `N` an integer, `1 <= N <= 10`. It
 
 #### 2. Indirect Access `-indirect-access`
 
-Load `$LLVM_BUILD/lib/IndirectAccess.so` and use `-indirect-access` flag.
+Load `$LLVM_BUILD/lib/IndirectAccess.so` and use `-loop-rotate -indirect-access` flag.
+
+NOTE: `loop-rotate` should be used before `indirect-access`
