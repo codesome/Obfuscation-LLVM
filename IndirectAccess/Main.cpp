@@ -38,7 +38,7 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT,
             LoopSplitInfo *LSI = new LoopSplitInfo(L);
             // LSI->iterator = loopIterator;
             LSI->iterator = temporaryIterator;
-            temporaryIterator->dump();
+            // temporaryIterator->dump();
             lsi->push_back(LSI);
             IndirectAccessUtils::cloneAndClearOriginal(LSI, LI, DT, F);
         }

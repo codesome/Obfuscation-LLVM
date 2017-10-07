@@ -7,6 +7,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/ADT/APInt.h"
 #include "IndirectAccess.h"
 using namespace llvm;
 
@@ -54,13 +55,12 @@ BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
 void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI, 
 	LoopInfo *LI, DominatorTree *DT, Function *F) {
 
-	BasicBlock *preHeader = LSI->originalLoopPreheader;
-
 	Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
-    IRBuilder<> headerBuilder(preHeader->getTerminator());
+    IRBuilder<> headerBuilder(LSI->originalLoopPreheader->getTerminator());
 
-    // Initialising cnt = 0 and array in loop pre header
+
+    // Initialising cnt = 0 in loop pre header
     // This is the runtime trip count of the loop to avoid any runtime errors
     // This count is used as loop bound for during indirect access
     Value* cnt = headerBuilder.CreateAlloca(i32, zero);
@@ -70,13 +70,25 @@ void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI,
     Value* indirectAccessArray = headerBuilder.CreateAlloca(ArrayType::get(i32, LSI->tripCount));
     indirectAccessArray->setName("ia");
 
-	BasicBlock *loopLatch = LSI->originalLoopLatch;
+    // array[cnt] = iterator in loop body
+    IRBuilder<> bodyBuilder(LSI->originalLoopBody->getTerminator());
+    Value *iterLoad = bodyBuilder.CreateLoad(LSI->iterator);
+    Value *countLoad1 = bodyBuilder.CreateLoad(cnt);
     
+    std::vector<Value*> idxVector;
+    idxVector.push_back(zero);
+    idxVector.push_back(countLoad1);
+    ArrayRef<Value*> idxList(idxVector);
+
+    Value *arrayIdx = bodyBuilder.CreateGEP(indirectAccessArray, idxList);
+
+    bodyBuilder.CreateStore(iterLoad, arrayIdx);
+
     // cnt++ in loop latch
     Value* one = ConstantInt::get(i32, 1);
-    IRBuilder<> latchBuilder(loopLatch->getTerminator());
-    Value *countLoad = latchBuilder.CreateLoad(cnt);
-    Value *increment = latchBuilder.CreateAdd(countLoad, one);
+    IRBuilder<> latchBuilder(LSI->originalLoopLatch->getTerminator());
+    Value *countLoad2 = latchBuilder.CreateLoad(cnt);
+    Value *increment = latchBuilder.CreateAdd(countLoad2, one);
     latchBuilder.CreateStore(increment, cnt);
 
     LSI->tripCountValue = cnt;
