@@ -12,6 +12,17 @@ using namespace llvm;
 
 struct LoopSplitInfo {
 
+    // The original loop
+    Loop* originalLoop;
+
+    // The cleared basic block in original loop where the indirect access array will be populated
+    BasicBlock* originalLoopBody;
+
+    // Preheader of original loop
+    BasicBlock* originalLoopPreheader;
+    // Latch of original loop
+    BasicBlock* originalLoopLatch;
+
     // The cloned loop where the indirect access will be done
     Loop* clonedLoop;
 
@@ -23,9 +34,19 @@ struct LoopSplitInfo {
     // for indirect access
     Value* tripCountValue;
 
-    LoopSplitInfo(): clonedLoop(nullptr), arrayValue(nullptr), tripCountValue(nullptr) {}
+    // iterator of the loop
+    Value* iterator;
 
-    LoopSplitInfo(Loop* clonedLoop, Value* arrayValue, Value* tripCountValue):
+    unsigned int tripCount;
+
+    LoopSplitInfo(Loop* originalLoop):
+        originalLoop(originalLoop), 
+        clonedLoop(nullptr), 
+        arrayValue(nullptr), 
+        tripCountValue(nullptr) {}
+    
+    LoopSplitInfo(Loop* originalLoop, Loop* clonedLoop, Value* arrayValue, Value* tripCountValue):
+        originalLoop(originalLoop),
         clonedLoop(clonedLoop), 
         arrayValue(arrayValue), 
         tripCountValue(tripCountValue) {}
@@ -44,8 +65,11 @@ public:
      **/
     static bool isLegalTransform(Loop *L, Value* loopIterator);
 
-    static LoopSplitInfo splitAndCreateArray(Loop *L, int tripCount, 
-        Value *loopIterator, LoopInfo *LI, DominatorTree *DT, Function *F);
+    static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
+        LoopInfo *LI, DominatorTree *DT, Function *F);
+
+    static void cloneAndClearOriginal(LoopSplitInfo *LSI, 
+        LoopInfo *LI, DominatorTree *DT, Function *F);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI);
 

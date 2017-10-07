@@ -43,23 +43,18 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     return newLoop;
 }
 
-// TODO: test it
-// BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
-//     ValueToValueMapTy VMap;
-//     BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
-//     return newBasicBlock;
-// }
+BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
+    ValueToValueMapTy VMap;
+    BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
+    return newBasicBlock;
+}
 
 } /* namespace */
 
-LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount, 
-	Value *loopIterator, LoopInfo *LI, DominatorTree *DT, Function *F) {
-	
-	LoopSplitInfo LSI(nullptr,nullptr,nullptr);
+void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI, 
+	LoopInfo *LI, DominatorTree *DT, Function *F) {
 
-	LSI.clonedLoop = cloneLoop(L, LI, DT);
-
-	BasicBlock *preHeader = L->getLoopPreheader();
+	BasicBlock *preHeader = LSI->originalLoopPreheader;
 
 	Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
@@ -72,10 +67,10 @@ LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount,
     cnt->setName("cnt");
 
     // Initialising array in loop pre header for indirect access
-    Value* indirectAccessArray = headerBuilder.CreateAlloca(ArrayType::get(i32, tripCount));
+    Value* indirectAccessArray = headerBuilder.CreateAlloca(ArrayType::get(i32, LSI->tripCount));
     indirectAccessArray->setName("ia");
 
-	BasicBlock *loopLatch = L->getLoopLatch();
+	BasicBlock *loopLatch = LSI->originalLoopLatch;
     
     // cnt++ in loop latch
     Value* one = ConstantInt::get(i32, 1);
@@ -84,13 +79,26 @@ LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount,
     Value *increment = latchBuilder.CreateAdd(countLoad, one);
     latchBuilder.CreateStore(increment, cnt);
 
-    LSI.tripCountValue = cnt;
-    LSI.arrayValue = indirectAccessArray;
+    LSI->tripCountValue = cnt;
+    LSI->arrayValue = indirectAccessArray;
 
+}
 
-	// TODO: clear all blocks between header and latch
-	// cloneBasicBlock(preHeader, F);
+void IndirectAccessUtils::cloneAndClearOriginal(LoopSplitInfo *LSI, 
+	LoopInfo *LI, DominatorTree *DT, Function *F) {
 
+	LSI->clonedLoop = cloneLoop(LSI->originalLoop, LI, DT);
 
-	return LSI;
+	BasicBlock *preHeader = LSI->originalLoop->getLoopPreheader();
+	BasicBlock *loopLatch = LSI->originalLoop->getLoopLatch();
+
+	BasicBlock* clonedBB = cloneBasicBlock(preHeader, F);
+	preHeader->getTerminator()->setSuccessor(0, clonedBB);
+	loopLatch->getTerminator()->setSuccessor(0, clonedBB);
+	clonedBB->getTerminator()->setSuccessor(0, loopLatch);
+
+	LSI->originalLoopPreheader = preHeader;
+	LSI->originalLoopBody = preHeader->getUniqueSuccessor();
+
+	LSI->originalLoopLatch = loopLatch;
 }
