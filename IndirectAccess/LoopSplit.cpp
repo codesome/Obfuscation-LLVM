@@ -6,6 +6,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "IndirectAccess.h"
 using namespace llvm;
 
@@ -43,16 +44,16 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
 }
 
 // TODO: test it
-BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
-    ValueToValueMapTy VMap;
-    BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
-    return newBasicBlock;
-}
+// BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
+//     ValueToValueMapTy VMap;
+//     BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
+//     return newBasicBlock;
+// }
 
 } /* namespace */
 
 LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount, 
-	Value *loopIterator, LLVMContext *CTX, LoopInfo *LI, DominatorTree *DT, Function *F) {
+	Value *loopIterator, LoopInfo *LI, DominatorTree *DT, Function *F) {
 	
 	LoopSplitInfo LSI(nullptr,nullptr,nullptr);
 
@@ -60,14 +61,19 @@ LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount,
 
 	BasicBlock *preHeader = L->getLoopPreheader();
 
-	// TODO: allocate array of size trip count
-    
-    // Initialising cnt = 0 in loop pre header
-	Type* i32 = Type::getInt32Ty(*CTX);
+	Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
     IRBuilder<> headerBuilder(preHeader->getTerminator());
+
+    // Initialising cnt = 0 and array in loop pre header
+    // This is the runtime trip count of the loop to avoid any runtime errors
+    // This count is used as loop bound for during indirect access
     Value* cnt = headerBuilder.CreateAlloca(i32, zero);
     cnt->setName("cnt");
+
+    // Initialising array in loop pre header for indirect access
+    Value* indirectAccessArray = headerBuilder.CreateAlloca(ArrayType::get(i32, tripCount));
+    indirectAccessArray->setName("ia");
 
 	BasicBlock *loopLatch = L->getLoopLatch();
     
@@ -79,6 +85,7 @@ LoopSplitInfo IndirectAccessUtils::splitAndCreateArray(Loop *L, int tripCount,
     latchBuilder.CreateStore(increment, cnt);
 
     LSI.tripCountValue = cnt;
+    LSI.arrayValue = indirectAccessArray;
 
 
 	// TODO: clear all blocks between header and latch

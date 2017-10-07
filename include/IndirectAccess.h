@@ -45,7 +45,7 @@ public:
     static bool isLegalTransform(Loop *L, Value* loopIterator);
 
     static LoopSplitInfo splitAndCreateArray(Loop *L, int tripCount, 
-        Value *loopIterator, LLVMContext *CTX, LoopInfo *LI, DominatorTree *DT, Function *F);
+        Value *loopIterator, LoopInfo *LI, DominatorTree *DT, Function *F);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI);
 

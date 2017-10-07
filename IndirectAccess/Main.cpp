@@ -16,7 +16,7 @@ using namespace llvm;
 namespace {
 
 // Runs split on inner most loop
-void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE, LLVMContext *CTX, Function *F) {
+void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE, Function *F) {
     // Stroing all the original loop pointes
     // Because after splitting the iteration gets affected due to new loops
     std::vector<Loop*> nestedLoops;
@@ -25,14 +25,14 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, ScalarEvolution *S
     }
     // Recursing over the original nested loops
     for (Loop *NL : nestedLoops) {
-        checkInnerMost(NL, LI, DT, SE, CTX, F);
+        checkInnerMost(NL, LI, DT, SE, F);
     }
     // Splitting only if loop doesn't have nested loop
     if(nestedLoops.size() <= 0) {
         Value* loopIterator;
         if(IndirectAccessUtils::isLegalTransform(L, loopIterator)) {
             int tripCount = SE->getSmallConstantTripCount(L);
-            LoopSplitInfo LSI = IndirectAccessUtils::splitAndCreateArray(L, tripCount, loopIterator, CTX, LI, DT, F);
+            LoopSplitInfo LSI = IndirectAccessUtils::splitAndCreateArray(L, tripCount, loopIterator, LI, DT, F);
             IndirectAccessUtils::updateIndirectAccess(&LSI);
         }
     }
@@ -54,7 +54,6 @@ bool IndirectAccess::runOnFunction(Function &F) {
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    LLVMContext &CTX = F.getContext();
 
     // Iterating only on original loops and not the ones created
     std::vector<Loop*> loops;
@@ -64,7 +63,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     // Splitting the original loops in function
     for (Loop *L : loops) {
-        checkInnerMost(L, &LI, &DT, &SE, &CTX, &F);
+        checkInnerMost(L, &LI, &DT, &SE, &F);
     }
 
     return modified;
