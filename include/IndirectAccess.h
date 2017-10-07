@@ -55,7 +55,8 @@ struct LoopSplitInfo {
 
 class IndirectAccessUtils {
 public:
-    /*
+    /*_______________________________________________________________________
+     *
      * Used to check for legality of indirect access of iterator
      *
      * @param Loop* L, the loop to check for legality
@@ -63,13 +64,34 @@ public:
      *      This will be populated with the loop iterator if result is legal
      *
      * @return true if its legal, else false
-     **/
+     *______________________________________________________________________*/
     static bool isLegalTransform(Loop *L, Value* loopIterator);
 
-    static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
+    /*______________________________________________________________________
+     *
+     * Clones the original loop and clears the body of the original loop
+     * The original loop will enter cloned loop after it exits
+     * NOTE: The analysis pass will be invalid after this function call
+     *
+     * @param LoopSplitInfo *LSI, which constains orginalLoop
+     * @param LoopInfo *LI, Loop info from analysis pass
+     * @param DominatorTree *DT, from analysis pass
+     * @param Function *F, functon in which the loop is present
+     *______________________________________________________________________*/
+    static void cloneAndClearOriginal(LoopSplitInfo *LSI, 
         LoopInfo *LI, DominatorTree *DT, Function *F);
 
-    static void cloneAndClearOriginal(LoopSplitInfo *LSI, 
+    /*______________________________________________________________________
+     *
+     * Allocate array and count and update the array
+     * inside the original loop body
+     * 
+     * @param LoopSplitInfo *LSI, which constains orginalLoop
+     * @param LoopInfo *LI, Loop info from analysis pass
+     * @param DominatorTree *DT, from analysis pass
+     * @param Function *F, functon in which the loop is present
+     *______________________________________________________________________*/
+    static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
         LoopInfo *LI, DominatorTree *DT, Function *F);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F);

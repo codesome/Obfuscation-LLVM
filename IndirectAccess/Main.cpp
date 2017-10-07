@@ -84,6 +84,8 @@ bool IndirectAccess::runOnFunction(Function &F) {
     FPM.run(F);
 
     for(LoopSplitInfo *LSI : lsi) {
+        // Keeping the array size constant till we get a way to get 
+        // trip count without causing problem in cloning and updating blocks
         LSI->tripCount = 1000;
         IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F);
     }
