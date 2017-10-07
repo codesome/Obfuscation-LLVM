@@ -13,6 +13,7 @@ using namespace llvm;
 struct LoopSplitInfo {
 
     // The original loop
+
     Loop* originalLoop;
 
     // The cleared basic block in original loop where the indirect access array will be populated
@@ -71,7 +72,7 @@ public:
     static void cloneAndClearOriginal(LoopSplitInfo *LSI, 
         LoopInfo *LI, DominatorTree *DT, Function *F);
 
-    static void updateIndirectAccess(LoopSplitInfo* LSI);
+    static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F);
 
 };
 
