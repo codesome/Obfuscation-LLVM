@@ -1,5 +1,7 @@
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "IndirectAccess.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
 
 void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F) {
@@ -21,20 +23,21 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F) 
     it->setName("it");
 
     // Adding instructions in loop latch
+    
     IRBuilder<> latchBuilder(loopLatch->getFirstNonPHI());
     Value *itLoad = latchBuilder.CreateLoad(it);
     Value* one = ConstantInt::get(i32, 1);
     Value *increment = latchBuilder.CreateAdd(itLoad, one);
     latchBuilder.CreateStore(increment, it);
     Value *itnew = latchBuilder.CreateLoad(it);
-    Value *cmpInst = latchBuilder.CreateICmpSLT(itnew,tripcount);
+    Value *tripcnt = latchBuilder.CreateLoad(tripcount);
+    Value *cmpInst = latchBuilder.CreateICmpSLT(itnew,tripcnt);
 
     // Replacing old iterator with new one
     Instruction* I = L->getLoopLatch()->getTerminator();
     I->setOperand(0,cmpInst);
     
     // Replacing the old variable with new one
-    Value* zero = ConstantInt::get(i32, 0);
     for(BasicBlock *B : L->getBlocks()) {
         if(B!=preHeader && B!=loopLatch) {
             // blocks which are not header and not latch
@@ -50,8 +53,7 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F) 
 
             // Replacing the value of 'i' with 'array[it]'
             Value *i_new = blockBuilder.CreateLoad(arrayIdx);
-            BasicBlock::iterator ii(LSI->iterator);
-            ReplaceInstWithValue(B->getInstList(), ii,i_new);
+            blockBuilder.CreateStore(i_new,LSI->iterator);
 
     	}
     }

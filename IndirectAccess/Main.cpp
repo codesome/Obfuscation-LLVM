@@ -88,6 +88,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
         // trip count without causing problem in cloning and updating blocks
         LSI->tripCount = 1000;
         IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F);
+        IndirectAccessUtils::updateIndirectAccess(LSI, &F);
     }
 
     return modified;
