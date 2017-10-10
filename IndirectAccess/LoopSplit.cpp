@@ -12,6 +12,21 @@ using namespace llvm;
 
 namespace {
 
+void swapLoops(Loop *L1, Loop *L2) {
+
+    BasicBlock *L1PreHeader = L1->getLoopPreheader();
+    BasicBlock *L1PrePreHeader = L1PreHeader->getUniquePredecessor();
+    BasicBlock *L2PreHeader = L2->getLoopPreheader();
+    BasicBlock *L1Latch = L1->getLoopLatch();
+    BasicBlock *L2Latch = L2->getLoopLatch();
+
+    BasicBlock *end = L2Latch->getTerminator()->getSuccessor(1);
+    L2Latch->getTerminator()->setSuccessor(1, L1PreHeader);
+    L1Latch->getTerminator()->setSuccessor(1, end);
+    L1PrePreHeader->getTerminator()->setSuccessor(0, L2PreHeader);
+
+}
+
 /*___________________________________________________________
  *
  * Clones a loop
@@ -32,6 +47,7 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     SmallVector< BasicBlock *, 8> blocks;
     
     // Cloning the loop
+    // Loop* newLoop = cloneLoopWithPreheader(Before, LoopDomBB, L, VMap, Twine(".cl"), LI, DT, blocks);
     Loop* newLoop = cloneLoopWithPreheader(Before, LoopDomBB, L, VMap, Twine(".cl"), LI, DT, blocks);
     // Remapping the blocks in new loop
     remapInstructionsInBlocks(blocks, VMap);
@@ -40,6 +56,8 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     // map to the preHeader of new loop
     // else it will be mapping to the new loop body
     L->getLoopLatch()->getTerminator()->setSuccessor(1,newLoop->getLoopPreheader());
+
+    swapLoops(L, newLoop);
 
     return newLoop;
 }
@@ -53,10 +71,32 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
  *
  * @return BasicBlock*, the cloned basic block
  *__________________________________________________________*/
-BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
-    ValueToValueMapTy VMap;
-    BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
-    return newBasicBlock;
+// BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
+//     ValueToValueMapTy VMap;
+//     BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
+//     return newBasicBlock;
+// }
+
+
+void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
+
+    BasicBlock *correctHeader = correct->getLoopPreheader();
+    BasicBlock *toBeFixedHeader = toBeFixed->getLoopPreheader();
+    BasicBlock *correctBody = correctHeader->getUniqueSuccessor();
+    BasicBlock *toBeFixedBody = toBeFixedHeader->getUniqueSuccessor();
+
+    std::vector<Value*> correctValues;
+    for(PHINode &phi: correctBody->phis()) {
+        correctValues.push_back(phi.getIncomingValueForBlock(correctHeader));
+    }
+
+    int i = 0, index;
+    for(PHINode &phi: toBeFixedBody->phis()) {
+        index = phi.getBasicBlockIndex(toBeFixedHeader);
+        phi.setIncomingValue(index, correctValues[i]);
+        i++;
+    }
+
 }
 
 } /* namespace */
@@ -107,25 +147,46 @@ void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI,
 
 }
 
-void IndirectAccessUtils::cloneAndClearOriginal(LoopSplitInfo *LSI, 
-    LoopInfo *LI, DominatorTree *DT, Function *F) {
+void IndirectAccessUtils::clone(LoopSplitInfo *LSI, 
+    LoopInfo *LI, DominatorTree *DT) {
 
     // This cloned loop is used to populate the array
     LSI->clonedLoop = cloneLoop(LSI->originalLoop, LI, DT);
 
-    BasicBlock *preHeader = LSI->originalLoop->getLoopPreheader();
-    BasicBlock *loopLatch = LSI->originalLoop->getLoopLatch();
-
-    // Inserting the cloned block in the original loop
-    // After this the original blocks inside loop 
-    // will become unreachable. Need to remove them manualy.
-    BasicBlock* clonedBB = cloneBasicBlock(preHeader, F);
-    preHeader->getTerminator()->setSuccessor(0, clonedBB);
-    loopLatch->getTerminator()->setSuccessor(0, clonedBB);
-    clonedBB->getTerminator()->setSuccessor(0, loopLatch);
+    BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
+    BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
 
     LSI->originalLoopPreheader = preHeader;
     LSI->originalLoopBody = preHeader->getUniqueSuccessor();
 
     LSI->originalLoopLatch = loopLatch;
+}
+
+void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
+
+    BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
+    BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
+    bool firstBody = true;
+    for(BasicBlock *BB: LSI->clonedLoop->getBlocks()) {
+        if(BB!=preHeader && BB!=loopLatch) {
+            for(Instruction &I : *BB) {
+                if(!dyn_cast<PHINode>(&I) || !firstBody) {
+                    I.replaceAllUsesWith(UndefValue::get(I.getType()));
+                }
+            }
+            firstBody = false;
+        }
+    }
+
+    fixPhiNodesInBody(LSI->clonedLoop, LSI->originalLoop);
+
+}
+
+Value* IndirectAccessUtils::getIterator(Loop *L) {
+    BasicBlock *preHeader = L->getLoopPreheader();
+    Value *iterator;
+    for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
+        iterator = dyn_cast<Value>(&phi);
+    }
+    return iterator;
 }

@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/Transforms/Scalar/DCE.h"
 #include "IndirectAccess.h"
 using namespace llvm;
 
@@ -16,7 +17,11 @@ using namespace llvm;
 
 namespace {
 
-Value *temporaryIterator;
+// This is a temporary function
+Value* getIterator(Loop* L) {
+    Instruction *I = dyn_cast<Instruction>(L->getLoopLatch()->getTerminator()->getOperand(0));
+    return dyn_cast<AllocaInst>(dyn_cast<Instruction>(I->getOperand(0))->getOperand(0));
+}
 
 // Runs split on inner most loop
 void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, 
@@ -36,11 +41,9 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT,
         Value* loopIterator;
         if(IndirectAccessUtils::isLegalTransform(L, loopIterator)) {
             LoopSplitInfo *LSI = new LoopSplitInfo(L);
-            // LSI->iterator = loopIterator;
-            LSI->iterator = temporaryIterator;
-            // temporaryIterator->dump();
+            LSI->iterator = getIterator(L);
             lsi->push_back(LSI);
-            IndirectAccessUtils::cloneAndClearOriginal(LSI, LI, DT, F);
+            IndirectAccessUtils::clone(LSI, LI, DT);
         }
     }
 }
@@ -54,21 +57,8 @@ bool IndirectAccess::runOnFunction(Function &F) {
     // If we enable loop rotate here, ScalarEvolution is giving error
     // Hence have -loop-rotate in command line before -indirect-access for now
     // FPM.add(createLoopRotatePass());
-    // FPM.add(createLoopSimplifyPass());
-
-    // ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-
-    // temporary
-    BasicBlock &HH = F.getEntryBlock();
-    int cnt = 0;
-    for(Instruction &I: HH) {
-        cnt++;
-        if(cnt==5) {
-            temporaryIterator = &I;
-            break;
-        }
-    }
-    // temporary
+    FPM.add(createLoopSimplifyPass());
+    FPM.run(F);
 
     // Iterating only on original loops and not the ones created
     std::vector<LoopSplitInfo*> lsi;
@@ -77,19 +67,24 @@ bool IndirectAccess::runOnFunction(Function &F) {
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
     // Splitting the original loops in function
+    // FPM.add(createUnreachableBlockEliminationPass());
     for (Loop *L : LI) {
         checkInnerMost(L, &LI, &DT, &F, &lsi);
     }
-    FPM.add(createUnreachableBlockEliminationPass());
+
+    FPM.add(createPromoteMemoryToRegisterPass());
     FPM.run(F);
+    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     for(LoopSplitInfo *LSI : lsi) {
-        // Keeping the array size constant till we get a way to get 
-        // trip count without causing problem in cloning and updating blocks
-        LSI->tripCount = 1000;
-        IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F);
-        IndirectAccessUtils::updateIndirectAccess(LSI, &F);
+        dbgs() << SE.getSmallConstantTripCount(LSI->clonedLoop) << "\n";
+        LSI->tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
+        IndirectAccessUtils::clearClonedLoop(LSI);
+        // IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F);
+        // IndirectAccessUtils::updateIndirectAccess(LSI, &F);
     }
+    FPM.add(createDeadInstEliminationPass());
+    FPM.run(F);
 
     return modified;
 }
@@ -97,7 +92,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
 void IndirectAccess::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    // AU.addRequired<ScalarEvolutionWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
 }
 
 

@@ -69,17 +69,24 @@ public:
 
     /*______________________________________________________________________
      *
-     * Clones the original loop and clears the body of the original loop
-     * The original loop will enter cloned loop after it exits
-     * NOTE: The analysis pass will be invalid after this function call
+     * Clones the original loop. After the clone, the cloned loop
+     * will be entered first which exits into the original loop
      *
      * @param LoopSplitInfo *LSI, which constains orginalLoop
      * @param LoopInfo *LI, Loop info from analysis pass
      * @param DominatorTree *DT, from analysis pass
-     * @param Function *F, functon in which the loop is present
      *______________________________________________________________________*/
-    static void cloneAndClearOriginal(LoopSplitInfo *LSI, 
-        LoopInfo *LI, DominatorTree *DT, Function *F);
+    static void clone(LoopSplitInfo *LSI, LoopInfo *LI, DominatorTree *DT);
+
+
+    /*______________________________________________________________________
+     *
+     * Clears the body of the cloned loop
+     * Except the iterator
+     *
+     * @param LoopSplitInfo *LSI, which constains orginalLoop
+     *______________________________________________________________________*/
+    static void clearClonedLoop(LoopSplitInfo *LSI);
 
     /*______________________________________________________________________
      *
@@ -95,6 +102,8 @@ public:
         LoopInfo *LI, DominatorTree *DT, Function *F);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F);
+
+    static Value* getIterator(Loop *L);
 
 };
 

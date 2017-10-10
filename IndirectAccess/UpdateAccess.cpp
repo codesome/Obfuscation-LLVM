@@ -24,7 +24,7 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F) 
 
     // Adding instructions in loop latch
     
-    IRBuilder<> latchBuilder(loopLatch->getFirstNonPHI());
+    IRBuilder<> latchBuilder(loopLatch->getTerminator());
     Value *itLoad = latchBuilder.CreateLoad(it);
     Value* one = ConstantInt::get(i32, 1);
     Value *increment = latchBuilder.CreateAdd(itLoad, one);
