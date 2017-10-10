@@ -92,7 +92,7 @@ public:
     static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
         LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray);
 
-    static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F);
+    static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F,Value *array);
 
     static Value* getIterator(Loop *L);
 

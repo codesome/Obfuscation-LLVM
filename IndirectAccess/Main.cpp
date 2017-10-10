@@ -93,10 +93,10 @@ bool IndirectAccess::runOnFunction(Function &F) {
         LSI->tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
         IndirectAccessUtils::clearClonedLoop(LSI);
         IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F, array);
-        // IndirectAccessUtils::updateIndirectAccess(LSI, &F);
+        IndirectAccessUtils::updateIndirectAccess(LSI, &F,array);
     }
-    FPM.add(createDeadInstEliminationPass());
-    FPM.run(F);
+    // FPM.add(createDeadInstEliminationPass());
+    // FPM.run(F);
 
     return modified;
 }
