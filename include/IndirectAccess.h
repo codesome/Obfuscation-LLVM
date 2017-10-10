@@ -13,16 +13,7 @@ using namespace llvm;
 struct LoopSplitInfo {
 
     // The original loop
-
     Loop* originalLoop;
-
-    // The cleared basic block in original loop where the indirect access array will be populated
-    BasicBlock* originalLoopBody;
-
-    // Preheader of original loop
-    BasicBlock* originalLoopPreheader;
-    // Latch of original loop
-    BasicBlock* originalLoopLatch;
 
     // The cloned loop where the indirect access will be done
     Loop* clonedLoop;
@@ -99,11 +90,13 @@ public:
      * @param Function *F, functon in which the loop is present
      *______________________________________________________________________*/
     static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
-        LoopInfo *LI, DominatorTree *DT, Function *F);
+        LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray);
 
     static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F);
 
     static Value* getIterator(Loop *L);
+
+    static Value* allocateArrayInEntryBlock(Function *F, int size);
 
 };
 

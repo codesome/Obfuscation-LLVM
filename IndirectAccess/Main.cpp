@@ -76,11 +76,23 @@ bool IndirectAccess::runOnFunction(Function &F) {
     FPM.run(F);
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
+    int maxTripCount = 0;
+    int tripCount;
+    for(LoopSplitInfo *LSI : lsi) {
+        tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
+        if(tripCount > maxTripCount) {
+            maxTripCount = tripCount;
+        }
+    }
+
+    Value *array = IndirectAccessUtils::allocateArrayInEntryBlock(&F, maxTripCount);
+
+    // allocate array in global
     for(LoopSplitInfo *LSI : lsi) {
         dbgs() << SE.getSmallConstantTripCount(LSI->clonedLoop) << "\n";
         LSI->tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
         IndirectAccessUtils::clearClonedLoop(LSI);
-        // IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F);
+        IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F, array);
         // IndirectAccessUtils::updateIndirectAccess(LSI, &F);
     }
     FPM.add(createDeadInstEliminationPass());

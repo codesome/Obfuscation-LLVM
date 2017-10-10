@@ -102,11 +102,10 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 } /* namespace */
 
 void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI, 
-    LoopInfo *LI, DominatorTree *DT, Function *F) {
-
+    LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray) {
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
-    IRBuilder<> headerBuilder(LSI->originalLoopPreheader->getTerminator());
+    IRBuilder<> headerBuilder(LSI->clonedLoop->getLoopPreheader()->getTerminator());
 
     // Initialising cnt = 0 in loop pre header
     // This is the runtime trip count of the loop to avoid any runtime errors
@@ -114,14 +113,11 @@ void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI,
     Value* cnt = headerBuilder.CreateAlloca(i32, zero);
     cnt->setName("cnt");
 
-    // Initialising array in loop pre header for indirect access
-    Value* indirectAccessArray = headerBuilder.CreateAlloca(ArrayType::get(i32, LSI->tripCount));
-    indirectAccessArray->setName("ia");
-
     // array[cnt] = iter,  iterator in loop body
-    IRBuilder<> bodyBuilder(LSI->originalLoopBody->getTerminator());
+    IRBuilder<> bodyBuilder(LSI->clonedLoop->getLoopPreheader()
+        ->getUniqueSuccessor()->getTerminator());
     // iter
-    Value *iterLoad = bodyBuilder.CreateLoad(LSI->iterator);
+    Value *iterLoad = getIterator(LSI->clonedLoop);
     // cnt
     Value *countLoad1 = bodyBuilder.CreateLoad(cnt);
     
@@ -137,7 +133,7 @@ void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI,
 
     // cnt++ in loop latch
     Value* one = ConstantInt::get(i32, 1);
-    IRBuilder<> latchBuilder(LSI->originalLoopLatch->getTerminator());
+    IRBuilder<> latchBuilder(LSI->clonedLoop->getLoopLatch()->getTerminator());
     Value *countLoad2 = latchBuilder.CreateLoad(cnt);
     Value *increment = latchBuilder.CreateAdd(countLoad2, one);
     latchBuilder.CreateStore(increment, cnt);
@@ -149,17 +145,8 @@ void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI,
 
 void IndirectAccessUtils::clone(LoopSplitInfo *LSI, 
     LoopInfo *LI, DominatorTree *DT) {
-
     // This cloned loop is used to populate the array
     LSI->clonedLoop = cloneLoop(LSI->originalLoop, LI, DT);
-
-    BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
-    BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
-
-    LSI->originalLoopPreheader = preHeader;
-    LSI->originalLoopBody = preHeader->getUniqueSuccessor();
-
-    LSI->originalLoopLatch = loopLatch;
 }
 
 void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
@@ -189,4 +176,15 @@ Value* IndirectAccessUtils::getIterator(Loop *L) {
         iterator = dyn_cast<Value>(&phi);
     }
     return iterator;
+}
+
+Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
+    BasicBlock &entryBlock = F->getEntryBlock();
+    IRBuilder<> builder(entryBlock.getTerminator());
+
+    // Initialising array in loop pre header for indirect access
+    Type* i32 = Type::getInt32Ty(F->getContext());
+    Value* indirectAccessArray = builder.CreateAlloca(ArrayType::get(i32, size));
+    indirectAccessArray->setName("ia");
+    return indirectAccessArray;
 }
