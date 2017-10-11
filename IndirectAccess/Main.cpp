@@ -15,16 +15,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "indirect-access"
 
+// TODO: add proper comments
 namespace {
 
-// This is a temporary function
-Value* getIterator(Loop* L) {
-    Instruction *I = dyn_cast<Instruction>(L->getLoopLatch()->getTerminator()->getOperand(0));
-    return dyn_cast<AllocaInst>(dyn_cast<Instruction>(I->getOperand(0))->getOperand(0));
-}
-
 // Runs split on inner most loop
-void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT, 
+void getInnerMostLoops(Loop *L, LoopInfo *LI, DominatorTree *DT, 
     Function *F, std::vector<LoopSplitInfo*> *lsi) {
     // Stroing all the original loop pointes
     // Because after splitting the iteration gets affected due to new loops
@@ -34,17 +29,13 @@ void checkInnerMost(Loop *L, LoopInfo *LI, DominatorTree *DT,
     }
     // Recursing over the original nested loops
     for (Loop *NL : nestedLoops) {
-        checkInnerMost(NL, LI, DT, F, lsi);
+        getInnerMostLoops(NL, LI, DT, F, lsi);
     }
     // Splitting only if loop doesn't have nested loop
     if(nestedLoops.size() <= 0) {
         Value* loopIterator;
-        if(IndirectAccessUtils::isLegalTransform(L, loopIterator)) {
-            LoopSplitInfo *LSI = new LoopSplitInfo(L);
-            LSI->iterator = getIterator(L);
-            lsi->push_back(LSI);
-            IndirectAccessUtils::clone(LSI, LI, DT);
-        }
+        LoopSplitInfo *LSI = new LoopSplitInfo(L);
+        lsi->push_back(LSI);
     }
 }
 
@@ -58,6 +49,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
     // Hence have -loop-rotate in command line before -indirect-access for now
     // FPM.add(createLoopRotatePass());
     FPM.add(createLoopSimplifyPass());
+    FPM.add(createPromoteMemoryToRegisterPass());
     FPM.run(F);
 
     // Iterating only on original loops and not the ones created
@@ -65,38 +57,37 @@ bool IndirectAccess::runOnFunction(Function &F) {
 
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-    // Splitting the original loops in function
-    // FPM.add(createUnreachableBlockEliminationPass());
-    for (Loop *L : LI) {
-        checkInnerMost(L, &LI, &DT, &F, &lsi);
-    }
-
-    FPM.add(createPromoteMemoryToRegisterPass());
-    FPM.run(F);
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+
+    for (Loop *L : LI) {
+        getInnerMostLoops(L, &LI, &DT, &F, &lsi);
+    }
 
     int maxTripCount = 0;
     int tripCount;
+    std::vector<LoopSplitInfo*> valid_lsi;
     for(LoopSplitInfo *LSI : lsi) {
-        tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
-        if(tripCount > maxTripCount) {
-            maxTripCount = tripCount;
+        if(IndirectAccessUtils::isLegalTransform(LSI->originalLoop)) {
+            dbgs() << SE.getSmallConstantTripCount(LSI->originalLoop) << "\n";
+            tripCount = SE.getSmallConstantTripCount(LSI->originalLoop);
+            if(tripCount > maxTripCount) {
+                maxTripCount = tripCount;
+            }
+            valid_lsi.push_back(LSI);
         }
     }
+    dbgs() << maxTripCount << "\n";
 
     Value *array = IndirectAccessUtils::allocateArrayInEntryBlock(&F, maxTripCount);
 
-    // allocate array in global
-    for(LoopSplitInfo *LSI : lsi) {
-        dbgs() << SE.getSmallConstantTripCount(LSI->clonedLoop) << "\n";
-        LSI->tripCount = SE.getSmallConstantTripCount(LSI->clonedLoop);
+    for(LoopSplitInfo *LSI : valid_lsi) {
+        IndirectAccessUtils::clone(LSI, &LI, &DT);
         IndirectAccessUtils::clearClonedLoop(LSI);
-        IndirectAccessUtils::initialiseAndUpdateArray(LSI, &LI, &DT, &F, array);
+        IndirectAccessUtils::populateArray(LSI, &LI, &DT, &F, array);
         IndirectAccessUtils::updateIndirectAccess(LSI, &F,array);
     }
-    // FPM.add(createDeadInstEliminationPass());
-    // FPM.run(F);
+    FPM.add(createDeadInstEliminationPass());
+    FPM.run(F);
 
     return modified;
 }

@@ -2,6 +2,6 @@
 #include "IndirectAccess.h"
 using namespace llvm;
 
-bool IndirectAccessUtils::isLegalTransform(Loop *L, Value* loopIterator) {
+bool IndirectAccessUtils::isLegalTransform(Loop *L) {
 	return true;
 }

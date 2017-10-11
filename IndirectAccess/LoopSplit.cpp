@@ -101,7 +101,7 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 
 } /* namespace */
 
-void IndirectAccessUtils::initialiseAndUpdateArray(LoopSplitInfo *LSI, 
+void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI, 
     LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray) {
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);

@@ -29,8 +29,6 @@ struct LoopSplitInfo {
     // iterator of the loop
     Value* iterator;
 
-    unsigned int tripCount;
-
     LoopSplitInfo(Loop* originalLoop):
         originalLoop(originalLoop), 
         clonedLoop(nullptr), 
@@ -51,12 +49,10 @@ public:
      * Used to check for legality of indirect access of iterator
      *
      * @param Loop* L, the loop to check for legality
-     * @param Value* loopIterator, this should be empty. 
-     *      This will be populated with the loop iterator if result is legal
      *
      * @return true if its legal, else false
      *______________________________________________________________________*/
-    static bool isLegalTransform(Loop *L, Value* loopIterator);
+    static bool isLegalTransform(Loop *L);
 
     /*______________________________________________________________________
      *
@@ -89,13 +85,19 @@ public:
      * @param DominatorTree *DT, from analysis pass
      * @param Function *F, functon in which the loop is present
      *______________________________________________________________________*/
-    static void initialiseAndUpdateArray(LoopSplitInfo *LSI, 
+    static void populateArray(LoopSplitInfo *LSI, 
         LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray);
 
+    // TODO: write proper comments for functions below and fix comments above
+
+    // Updates indirect access in original loop
     static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F,Value *array);
 
+    // Gives the iterator from the loop
+    // TODO: use isInductionPhi
     static Value* getIterator(Loop *L);
 
+    // Allocates an array of given size in entry block
     static Value* allocateArrayInEntryBlock(Function *F, int size);
 
 };
