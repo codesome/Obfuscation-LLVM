@@ -83,7 +83,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
     for(LoopSplitInfo *LSI : valid_lsi) {
         IndirectAccessUtils::clone(LSI, &LI, &DT);
         IndirectAccessUtils::clearClonedLoop(LSI);
-        IndirectAccessUtils::populateArray(LSI, &LI, &DT, &F, array);
+        IndirectAccessUtils::populateArray(LSI, &LI, &DT, &F, array, &SE);
         IndirectAccessUtils::updateIndirectAccess(LSI, &F,array);
     }
     FPM.add(createDeadInstEliminationPass());

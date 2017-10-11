@@ -6,6 +6,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/LLVMContext.h"
 using namespace llvm;
 
@@ -25,9 +26,6 @@ struct LoopSplitInfo {
     // this is that value which is used for iterating 
     // for indirect access
     Value* tripCountValue;
-
-    // iterator of the loop
-    Value* iterator;
 
     LoopSplitInfo(Loop* originalLoop):
         originalLoop(originalLoop), 
@@ -85,8 +83,8 @@ public:
      * @param DominatorTree *DT, from analysis pass
      * @param Function *F, functon in which the loop is present
      *______________________________________________________________________*/
-    static void populateArray(LoopSplitInfo *LSI, 
-        LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray);
+    static void populateArray(LoopSplitInfo *LSI,
+        LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray, ScalarEvolution *SE);
 
     // TODO: write proper comments for functions below and fix comments above
 
@@ -94,8 +92,8 @@ public:
     static void updateIndirectAccess(LoopSplitInfo* LSI, Function* F,Value *array);
 
     // Gives the iterator from the loop
-    // TODO: use isInductionPhi
     static Value* getIterator(Loop *L);
+    static Value* getIterator(Loop *L, ScalarEvolution *SE);
 
     // Allocates an array of given size in entry block
     static Value* allocateArrayInEntryBlock(Function *F, int size);

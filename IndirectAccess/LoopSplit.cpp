@@ -2,7 +2,9 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -102,7 +104,7 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 } /* namespace */
 
 void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI, 
-    LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray) {
+    LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray, ScalarEvolution *SE) {
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
     IRBuilder<> headerBuilder(LSI->clonedLoop->getLoopPreheader()->getTerminator());
@@ -117,7 +119,7 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     IRBuilder<> bodyBuilder(LSI->clonedLoop->getLoopPreheader()
         ->getUniqueSuccessor()->getTerminator());
     // iter
-    Value *iterLoad = getIterator(LSI->clonedLoop);
+    Value *iterLoad = getIterator(LSI->clonedLoop, SE);
     // cnt
     Value *countLoad1 = bodyBuilder.CreateLoad(cnt);
     
@@ -176,6 +178,17 @@ Value* IndirectAccessUtils::getIterator(Loop *L) {
         iterator = dyn_cast<Value>(&phi);
     }
     return iterator;
+}
+
+Value* IndirectAccessUtils::getIterator(Loop *L, ScalarEvolution *SE) {
+    BasicBlock *preHeader = L->getLoopPreheader();
+    for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
+        InductionDescriptor ID;
+        if(InductionDescriptor::isInductionPHI(&phi, L, SE, ID)) {
+            return dyn_cast<Value>(&phi);
+        }
+    }
+    return nullptr;
 }
 
 Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
