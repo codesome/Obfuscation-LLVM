@@ -4,11 +4,11 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
 
-void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, Value *array) {
+void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, Value *array, ScalarEvolution *SE) {
 	if(LSI->clonedLoop==nullptr)
 		return;
     
-    Value *iterator = getIterator(LSI->originalLoop);
+    Value *iterator = getIterator(LSI->originalLoop, SE);
     // L is the cloned loop where indirect access is to be done.
     Loop* L = LSI->originalLoop;
     Value* tripcount = LSI->tripCountValue;  // Loop trip count

@@ -15,25 +15,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "indirect-access"
 
-// TODO: add proper comments
 namespace {
 
-// Runs split on inner most loop
-void getInnerMostLoops(Loop *L, LoopInfo *LI, DominatorTree *DT, 
-    Function *F, std::vector<LoopSplitInfo*> *lsi) {
-    // Stroing all the original loop pointes
-    // Because after splitting the iteration gets affected due to new loops
-    std::vector<Loop*> nestedLoops;
+/*___________________________________________________________
+ *
+ * Performs a DFS on the loops and populates the vector lsi
+ * with the innermost loops
+ *
+ * @param Loop *L, the loop to be visited
+ * @param std::vector<LoopSplitInfo*> *lsi, vector in which 
+ *             innermost loops are pushed
+ *___________________________________________________________*/
+void getInnerMostLoops(Loop *L, std::vector<LoopSplitInfo*> *lsi) {
+    bool containsNestedLoops = false;
     for (Loop *NL : *L) {
-        nestedLoops.push_back(NL);
-    }
-    // Recursing over the original nested loops
-    for (Loop *NL : nestedLoops) {
-        getInnerMostLoops(NL, LI, DT, F, lsi);
+        containsNestedLoops = true;
+        getInnerMostLoops(NL, lsi);
     }
     // Splitting only if loop doesn't have nested loop
-    if(nestedLoops.size() <= 0) {
-        Value* loopIterator;
+    if(!containsNestedLoops) {
         LoopSplitInfo *LSI = new LoopSplitInfo(L);
         lsi->push_back(LSI);
     }
@@ -45,30 +45,29 @@ bool IndirectAccess::runOnFunction(Function &F) {
     bool modified = true;
 
     legacy::FunctionPassManager FPM(F.getParent());
-    // If we enable loop rotate here, ScalarEvolution is giving error
-    // Hence have -loop-rotate in command line before -indirect-access for now
-    // FPM.add(createLoopRotatePass());
     FPM.add(createLoopSimplifyPass());
     FPM.add(createPromoteMemoryToRegisterPass());
     FPM.run(F);
-
-    // Iterating only on original loops and not the ones created
-    std::vector<LoopSplitInfo*> lsi;
 
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
+    // This vector will be filled with the inner most loops
+    std::vector<LoopSplitInfo*> lsi;
     for (Loop *L : LI) {
-        getInnerMostLoops(L, &LI, &DT, &F, &lsi);
+        getInnerMostLoops(L, &lsi);
     }
 
-    int maxTripCount = 0;
-    int tripCount;
+
+    // This will contain the filtered innermost loops after validity check
     std::vector<LoopSplitInfo*> valid_lsi;
+    // Max trip count of valid loops 
+    int maxTripCount = 0;
+    
+    int tripCount;
     for(LoopSplitInfo *LSI : lsi) {
         if(IndirectAccessUtils::isLegalTransform(LSI->originalLoop)) {
-            dbgs() << SE.getSmallConstantTripCount(LSI->originalLoop) << "\n";
             tripCount = SE.getSmallConstantTripCount(LSI->originalLoop);
             if(tripCount > maxTripCount) {
                 maxTripCount = tripCount;
@@ -76,16 +75,24 @@ bool IndirectAccess::runOnFunction(Function &F) {
             valid_lsi.push_back(LSI);
         }
     }
-    dbgs() << maxTripCount << "\n";
 
+    // Allocating array of max trip count in entry block
+    // This array will be reused in all the valid loops
     Value *array = IndirectAccessUtils::allocateArrayInEntryBlock(&F, maxTripCount);
 
     for(LoopSplitInfo *LSI : valid_lsi) {
+        // clone the loop
         IndirectAccessUtils::clone(LSI, &LI, &DT);
+        // clear the cloned loop
         IndirectAccessUtils::clearClonedLoop(LSI);
-        IndirectAccessUtils::populateArray(LSI, &LI, &DT, &F, array, &SE);
-        IndirectAccessUtils::updateIndirectAccess(LSI, &F,array);
+        // populate the array with induction variable in the cloned loop
+        IndirectAccessUtils::populateArray(LSI, &F, array, &SE);
+        // replace uses of insuction variable with indirect access in original loop
+        IndirectAccessUtils::updateIndirectAccess(LSI, &F, array, &SE);
     }
+
+    // dead instructions will be created while clearing cloned loop
+    // hence removing it
     FPM.add(createDeadInstEliminationPass());
     FPM.run(F);
 
@@ -97,7 +104,6 @@ void IndirectAccess::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
 }
-
 
 // Registering the pass
 char IndirectAccess::ID = 0;

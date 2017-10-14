@@ -14,6 +14,14 @@ using namespace llvm;
 
 namespace {
 
+/*_______________________________________________________________
+ *
+ * After cloning, cloned loop is put after the original
+ * This function moves the cloned loop before the original loop
+ *
+ * @param Loop *L1, the original loop (the first loop)
+ * @param Loop *L2, the cloned loop (the second loop)
+ *_______________________________________________________________*/
 void swapLoops(Loop *L1, Loop *L2) {
 
     BasicBlock *L1PreHeader = L1->getLoopPreheader();
@@ -64,22 +72,14 @@ Loop* cloneLoop(Loop *L, LoopInfo *LI, DominatorTree *DT) {
     return newLoop;
 }
 
-/*___________________________________________________________
+/*___________________________________________________________________________________
  *
- * Clones a basic block
+ * After changing all uses to undef, phi nodes are affected in the loop following it.
+ * Updating the value with values from the cloned loop
  *
- * @param BasicBlock *BB, the basic block to be cloned
- * @param Function *F, the function in which BB exists
- *
- * @return BasicBlock*, the cloned basic block
- *__________________________________________________________*/
-// BasicBlock* cloneBasicBlock(BasicBlock *BB, Function *F) {
-//     ValueToValueMapTy VMap;
-//     BasicBlock* newBasicBlock = CloneBasicBlock(BB, VMap, Twine(".cl"), F);
-//     return newBasicBlock;
-// }
-
-
+ * @param Loop *correct, the cloned loop where loop was cleared
+ * @param Loop *toBeFixed, the original loop where phi nodes got undef values
+ *_________________________________________________________________________________*/
 void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 
     BasicBlock *correctHeader = correct->getLoopPreheader();
@@ -87,11 +87,14 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
     BasicBlock *correctBody = correctHeader->getUniqueSuccessor();
     BasicBlock *toBeFixedBody = toBeFixedHeader->getUniqueSuccessor();
 
+    // collecting correct values from cloned loop for its preheader
     std::vector<Value*> correctValues;
     for(PHINode &phi: correctBody->phis()) {
         correctValues.push_back(phi.getIncomingValueForBlock(correctHeader));
     }
 
+    // The cloned and original loops have phi nodes in same order
+    // Updating phi node values for pre header of original loop with pre header for clone loop
     int i = 0, index;
     for(PHINode &phi: toBeFixedBody->phis()) {
         index = phi.getBasicBlockIndex(toBeFixedHeader);
@@ -104,7 +107,8 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 } /* namespace */
 
 void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI, 
-    LoopInfo *LI, DominatorTree *DT, Function *F, Value *indirectAccessArray, ScalarEvolution *SE) {
+    Function *F,Value *indirectAccessArray, ScalarEvolution *SE) {
+    
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
     IRBuilder<> headerBuilder(LSI->clonedLoop->getLoopPreheader()->getTerminator());
@@ -113,7 +117,6 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     // This is the runtime trip count of the loop to avoid any runtime errors
     // This count is used as loop bound for during indirect access
     Value* cnt = headerBuilder.CreateAlloca(i32, zero);
-    cnt->setName("cnt");
 
     // array[cnt] = iter,  iterator in loop body
     IRBuilder<> bodyBuilder(LSI->clonedLoop->getLoopPreheader()
@@ -121,12 +124,13 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     // iter
     Value *iterLoad = getIterator(LSI->clonedLoop, SE);
     // cnt
-    Value *countLoad1 = bodyBuilder.CreateLoad(cnt);
+    Value *countLoadBody = bodyBuilder.CreateLoad(cnt);
     
     // array[cnt]
+    // GEP needs '0, cnt'
     std::vector<Value*> idxVector;
-    idxVector.push_back(zero);
-    idxVector.push_back(countLoad1);
+    idxVector.push_back(zero); // 0
+    idxVector.push_back(countLoadBody); // cnt
     ArrayRef<Value*> idxList(idxVector);
     Value *arrayIdx = bodyBuilder.CreateGEP(indirectAccessArray, idxList);
 
@@ -136,12 +140,12 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     // cnt++ in loop latch
     Value* one = ConstantInt::get(i32, 1);
     IRBuilder<> latchBuilder(LSI->clonedLoop->getLoopLatch()->getTerminator());
-    Value *countLoad2 = latchBuilder.CreateLoad(cnt);
-    Value *increment = latchBuilder.CreateAdd(countLoad2, one);
+    Value *countLoadLatch = latchBuilder.CreateLoad(cnt);
+    Value *increment = latchBuilder.CreateAdd(countLoadLatch, one);
     latchBuilder.CreateStore(increment, cnt);
 
+    // runtime trip count
     LSI->tripCountValue = cnt;
-    LSI->arrayValue = indirectAccessArray;
 
 }
 
@@ -155,6 +159,11 @@ void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
 
     BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
     BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
+    
+    // Making all uses of instructions (except preheader and loop latch) to undef
+    // NOTE: Uses of phi nodes in the first BasicBlock of body are not made undef
+    //       as we need it for updating indirect access
+    // All instructions of rest of the BasicBlock in the body is made undef
     bool firstBody = true;
     for(BasicBlock *BB: LSI->clonedLoop->getBlocks()) {
         if(BB!=preHeader && BB!=loopLatch) {
@@ -171,16 +180,8 @@ void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
 
 }
 
-Value* IndirectAccessUtils::getIterator(Loop *L) {
-    BasicBlock *preHeader = L->getLoopPreheader();
-    Value *iterator;
-    for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
-        iterator = dyn_cast<Value>(&phi);
-    }
-    return iterator;
-}
-
 Value* IndirectAccessUtils::getIterator(Loop *L, ScalarEvolution *SE) {
+    // Getting the first induction phi
     BasicBlock *preHeader = L->getLoopPreheader();
     for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
         InductionDescriptor ID;
@@ -198,6 +199,5 @@ Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
     // Initialising array in loop pre header for indirect access
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* indirectAccessArray = builder.CreateAlloca(ArrayType::get(i32, size));
-    indirectAccessArray->setName("ia");
     return indirectAccessArray;
 }
