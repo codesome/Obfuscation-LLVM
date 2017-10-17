@@ -39,7 +39,7 @@ public:
      *
      * @return true if its legal, else false
      *______________________________________________________________________*/
-    static bool isLegalTransform(Loop *L);
+    static bool isLegalTransform(Loop *L, ScalarEvolution *SE);
 
     /*______________________________________________________________________
      *

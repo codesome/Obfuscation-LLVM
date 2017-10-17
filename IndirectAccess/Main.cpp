@@ -67,7 +67,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
     
     int tripCount;
     for(LoopSplitInfo *LSI : lsi) {
-        if(IndirectAccessUtils::isLegalTransform(LSI->originalLoop)) {
+        if(IndirectAccessUtils::isLegalTransform(LSI->originalLoop, &SE)) {
             tripCount = SE.getSmallConstantTripCount(LSI->originalLoop);
             if(tripCount > maxTripCount) {
                 maxTripCount = tripCount;
@@ -76,25 +76,27 @@ bool IndirectAccess::runOnFunction(Function &F) {
         }
     }
 
-    // Allocating array of max trip count in entry block
-    // This array will be reused in all the valid loops
-    Value *array = IndirectAccessUtils::allocateArrayInEntryBlock(&F, maxTripCount);
+    if(maxTripCount>0) {
+        // Allocating array of max trip count in entry block
+        // This array will be reused in all the valid loops
+        Value *array = IndirectAccessUtils::allocateArrayInEntryBlock(&F, maxTripCount);
 
-    for(LoopSplitInfo *LSI : valid_lsi) {
-        // clone the loop
-        IndirectAccessUtils::clone(LSI, &LI, &DT);
-        // clear the cloned loop
-        IndirectAccessUtils::clearClonedLoop(LSI);
-        // populate the array with induction variable in the cloned loop
-        IndirectAccessUtils::populateArray(LSI, &F, array, &SE);
-        // replace uses of insuction variable with indirect access in original loop
-        IndirectAccessUtils::updateIndirectAccess(LSI, &F, array, &SE);
+        for(LoopSplitInfo *LSI : valid_lsi) {
+            // clone the loop
+            IndirectAccessUtils::clone(LSI, &LI, &DT);
+            // clear the cloned loop
+            IndirectAccessUtils::clearClonedLoop(LSI);
+            // populate the array with induction variable in the cloned loop
+            IndirectAccessUtils::populateArray(LSI, &F, array, &SE);
+            // replace uses of insuction variable with indirect access in original loop
+            IndirectAccessUtils::updateIndirectAccess(LSI, &F, array, &SE);
+        }
+
+        // dead instructions will be created while clearing cloned loop
+        // hence removing it
+        FPM.add(createDeadInstEliminationPass());
+        FPM.run(F);
     }
-
-    // dead instructions will be created while clearing cloned loop
-    // hence removing it
-    FPM.add(createDeadInstEliminationPass());
-    FPM.run(F);
 
     return modified;
 }
