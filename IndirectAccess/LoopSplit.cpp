@@ -116,7 +116,9 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     // Initialising cnt = 0 in loop pre header
     // This is the runtime trip count of the loop to avoid any runtime errors
     // This count is used as loop bound for during indirect access
-    Value* cnt = headerBuilder.CreateAlloca(i32, zero);
+    AllocaInst* cnt = headerBuilder.CreateAlloca(i32);
+    headerBuilder.CreateStore(zero, cnt);
+    // cnt->setAlignment(4);
 
     // array[cnt] = iter,  iterator in loop body
     IRBuilder<> bodyBuilder(LSI->clonedLoop->getLoopPreheader()
@@ -198,6 +200,7 @@ Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
 
     // Initialising array in loop pre header for indirect access
     Type* i32 = Type::getInt32Ty(F->getContext());
-    Value* indirectAccessArray = builder.CreateAlloca(ArrayType::get(i32, size));
+    AllocaInst* indirectAccessArray = builder.CreateAlloca(ArrayType::get(i32, size));
+    // indirectAccessArray->setAlignment(16);
     return indirectAccessArray;
 }
