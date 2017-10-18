@@ -34,11 +34,13 @@ bool ArithmeticObfuscation::runOnFunction(Function &F) {
 
     int nIter = numIterations;
 
-    if(nIter <0) {
+    if(nIter <= 0) {
+        // should have atleast 1
         nIter = 1;
         DEBUG(dbgs() << "Number of iterations given is <0. Setting it to 1.\n");
-    }
-    else if(nIter > 10) {
+    } else if(nIter > 10) {
+        // Not allowing more than 10, this is for efficiency of code
+        // The code size grows exponentially with nIter
         DEBUG(dbgs() << "Number of iterations given is >10. Setting it to 10.\n");
         nIter = 10;
     }
@@ -72,16 +74,13 @@ bool ArithmeticObfuscation::runOnFunction(Function &F) {
         if(iterModified) {
             modified = true;
         } else {
+            // if nothing was modified in this iteration
+            // then no use of going to next iteration
             break;
         }
     }
     return modified;
 }
-
-void ArithmeticObfuscation::getAnalysisUsage(AnalysisUsage &AU) const {
-
-}
-
 
 // Registering the pass
 char ArithmeticObfuscation::ID = 0;

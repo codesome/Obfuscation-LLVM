@@ -10,21 +10,32 @@ using namespace llvm;
 /* NOTE: Obfuscates only add operation */
 class AddObfuscator {
 public:
-    /*
+    /*____________________________________________________
+     *
+     * Obfuscates entire function
+     * @param Function* F, the function to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Function *F);
-    
-    /*
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(BasicBlock *BB);
 
-    /*
-     * NOTE: Does not remove or erase the instruction from the block
-     *       But changes all the uses. Need to erase it manually.
+
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Instruction *I);
 };
 
@@ -33,23 +44,33 @@ public:
 class SubObfuscator {
 
 public:
-    /*
+    /*____________________________________________________
+     *
+     * Obfuscates entire function
+     * @param Function* F, the function to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Function *F);
-    
-    /*
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(BasicBlock *BB);
 
-    /*
-     * NOTE: Does not remove or erase the instruction from the block
-     *       But changes all the uses. Need to erase it manually.
-     * @return true if IR is modified, false otherwise
-     **/
-    static bool obfuscate(Instruction *I);
 
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/Mul.cpp */
@@ -57,69 +78,101 @@ public:
 class MulObfuscator {
 
 public:
-    /*
+    /*____________________________________________________
+     *
+     * Obfuscates entire function
+     * @param Function* F, the function to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Function *F);
-    
-    /*
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(BasicBlock *BB);
 
-    /*
-     * NOTE: Does not remove or erase the instruction from the block
-     *       But changes all the uses. Need to erase it manually.
-     * @return true if IR is modified, false otherwise
-     **/
-    static bool obfuscate(Instruction *I);
 
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(Instruction *I);
 };
 
-/* Implemented in ArithmeticObfuscation/Div.cpp */
-/* NOTE: Obfuscates only div operation */
+/* Implemented in ArithmeticObfuscation/UDiv.cpp */
+/* NOTE: Obfuscates only udiv operation */
 class UDivObfuscator {
 
 public:
-    /*
+    /*____________________________________________________
+     *
+     * Obfuscates entire function
+     * @param Function* F, the function to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Function *F);
-    
-    /*
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(BasicBlock *BB);
 
-    /*
-     * NOTE: Does not remove or erase the instruction from the block
-     *       But changes all the uses. Need to erase it manually.
-     * @return true if IR is modified, false otherwise
-     **/
-    static bool obfuscate(Instruction *I);
 
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(Instruction *I);
 };
 
+/* Implemented in ArithmeticObfuscation/SDiv.cpp */
+/* NOTE: Obfuscates only sdiv operation */
 class SDivObfuscator {
 
 public:
-    /*
+    /*____________________________________________________
+     *
+     * Obfuscates entire function
+     * @param Function* F, the function to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(Function *F);
-    
-    /*
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
      * @return true if IR is modified, false otherwise
-     **/
+     *____________________________________________________*/
     static bool obfuscate(BasicBlock *BB);
 
-    /*
-     * NOTE: Does not remove or erase the instruction from the block
-     *       But changes all the uses. Need to erase it manually.
-     * @return true if IR is modified, false otherwise
-     **/
-    static bool obfuscate(Instruction *I);
 
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(Instruction *I);
 };
 
 class ArithmeticObfuscation : public FunctionPass {
@@ -130,9 +183,6 @@ public:
     ArithmeticObfuscation() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F);
-    
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
-
 };
 
 #endif
