@@ -169,9 +169,11 @@ void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
     bool firstBody = true;
     for(BasicBlock *BB: LSI->clonedLoop->getBlocks()) {
         if(BB!=preHeader && BB!=loopLatch) {
-            for(Instruction &I : *BB) {
-                if(!dyn_cast<PHINode>(&I) || !firstBody) {
-                    I.replaceAllUsesWith(UndefValue::get(I.getType()));
+            for(BasicBlock::iterator DI = BB->begin(); DI != BB->end();) {
+                Instruction *I = &*DI++;
+                if( BB->getTerminator()!=I && (!dyn_cast<PHINode>(I) || !firstBody)) {
+                    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+                    I->eraseFromParent();
                 }
             }
             firstBody = false;
