@@ -65,9 +65,10 @@ bool obfuscateFloat(Instruction *I) {
     Value* aCond = conditionBuilder.CreateFCmpOLT(a, INT_MAX64_DIV_2_FP);
     Value* bCond = conditionBuilder.CreateFCmpOLT(b, INT_MAX64_DIV_2_FP);
     Value* ifcond = conditionBuilder.CreateAnd(aCond, bCond);
+    Value* result = conditionBuilder.CreateAlloca(floatType);
     conditionBuilder.CreateCondBr(ifcond, ifThenBB, ifElseBB);
 
-    // if.then
+    /** if.then **/
     IRBuilder<> ifThenBuilder(ifThenBB);
     // aXX = int64(a)
     Value *aXX = ifThenBuilder.CreateFPToSI(a, i64);
@@ -89,23 +90,23 @@ bool obfuscateFloat(Instruction *I) {
     Value *qFloat = ifThenBuilder.CreateFAdd(aYY, bYY);
     // ifThenResult = pFloat + qFloat
     Value *ifThenResult = ifThenBuilder.CreateFAdd(pFloat, qFloat);
+    ifThenBuilder.CreateStore(ifThenResult, result);
     ifThenBuilder.CreateBr(ifEndBB);
     
-    // if.else
+    /** if.else **/
     IRBuilder<> ifElseBuilder(ifElseBB);
     // a + b
     Value* ifElseResult = ifElseBuilder.CreateFAdd(a,b);
+    ifElseBuilder.CreateStore(ifElseResult, result);
     ifElseBuilder.CreateBr(ifEndBB);
 
-    // if.end
+    /** if.end **/
     IRBuilder<> ifEndBuilder(ifEndBB);
-    PHINode *phi = ifEndBuilder.CreatePHI(floatType, 2);
-    phi->addIncoming(ifThenResult, ifThenBB);
-    phi->addIncoming(ifElseResult, ifElseBB);
+    Value *resultLoad = ifEndBuilder.CreateLoad(result);
 
     // moving all instruction after I from original block
     // to if.end, after the phi instruction
-    Instruction* next = dyn_cast<Instruction>(phi);
+    Instruction* next = dyn_cast<Instruction>(resultLoad);
     std::vector<Instruction *> toMove;
     while(toMoveInst != nullptr) {
         toMove.push_back(toMoveInst);
@@ -117,7 +118,7 @@ bool obfuscateFloat(Instruction *I) {
             next = II;
     }
 
-    I->replaceAllUsesWith(phi);
+    I->replaceAllUsesWith(resultLoad);
 
     return true;
 }
