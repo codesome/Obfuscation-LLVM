@@ -14,8 +14,10 @@ namespace {
 bool obfuscate(Instruction *I) {
     switch(I->getOpcode()) {
         case (Instruction::Add):
+        case (Instruction::FAdd):
             return AddObfuscator::obfuscate(I);
         case (Instruction::Sub):
+        case (Instruction::FSub):
             return SubObfuscator::obfuscate(I);
         case (Instruction::SDiv):
             return SDivObfuscator::obfuscate(I);
