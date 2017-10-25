@@ -32,7 +32,6 @@ bool obfuscateInteger(Instruction *I) {
 }
 
 bool obfuscateFloat(Instruction *I) {
-
     Value* a = I->getOperand(0);
     Value* b = I->getOperand(1);
     static LLVMContext& context = I->getParent()->getContext();
