@@ -76,8 +76,14 @@ void ArithmeticObfuscationUtils::floatAddSubObfuscator(Instruction *I, bool isAd
     
     /** if.else **/
     IRBuilder<> ifElseBuilder(ifElseBB);
-    // a + b
-    Value* ifElseResult = ifElseBuilder.CreateFAdd(a,b);
+    Value* ifElseResult;
+    if(isAdd) { // its FAdd
+    	// a + b
+    	ifElseResult = ifElseBuilder.CreateFAdd(a,b);
+    } else { // its FSub
+    	// a - b
+    	ifElseResult = ifElseBuilder.CreateFSub(a,b);
+    }
     ifElseBuilder.CreateStore(ifElseResult, result);
     ifElseBuilder.CreateBr(ifEndBB);
 
