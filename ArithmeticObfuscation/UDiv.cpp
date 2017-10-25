@@ -3,30 +3,6 @@
 #include "ArithmeticObfuscation.h"
 using namespace llvm;
 
-bool UDivObfuscator::obfuscate(Function *F) {
-    bool modified = false;
-    for(BasicBlock &BB : *F) {
-        modified = obfuscate(&BB) || modified;        
-    }
-    return modified;
-}
-
-bool UDivObfuscator::obfuscate(BasicBlock *BB) {
-    bool modified = false;
-    std::vector<Instruction *> toErase;
-    for(Instruction &I : *BB) {
-        if(obfuscate(&I)) {
-            modified = true;
-            toErase.push_back(&I);
-        }
-    }
-    for(Instruction *I: toErase) {
-        I->eraseFromParent();
-    }
-
-    return modified;
-}
-
 bool UDivObfuscator::obfuscate(Instruction *I) {
      if(I->getOpcode() != Instruction::UDiv)
         return false;

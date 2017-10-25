@@ -30,40 +30,26 @@ bool obfuscateInteger(Instruction *I) {
 }
 
 bool obfuscateFloat(Instruction *I) {
-    ArithmeticObfuscationUtils::floatAddSubObfuscator(I, false);
+    auto ifThenCaller = [](IRBuilder<>* ifThenBuilder, 
+        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY) {
+        // pInt = aXX - bXX
+        Value *pInt = ifThenBuilder->CreateSub(aXX, bXX);
+        // pFloat = int64(pInt) = int64(aXX + bXX)
+        Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
+        // qFloat = aYY - bYY
+        Value *qFloat = ifThenBuilder->CreateFSub(aYY, bYY);
+        // ifThenResult = pFloat + qFloat
+        return ifThenBuilder->CreateFAdd(pFloat, qFloat);
+    };
+    auto ifElseCaller = [](IRBuilder<>* ifElseBuilder, Value* a, Value* b) {
+        // a - b
+        return ifElseBuilder->CreateFSub(a,b);
+    };
+    ArithmeticObfuscationUtils::floatObfuscator(I, 4611686018427387903.0, ifThenCaller, ifElseCaller);
     return true;
 }
 
 } /* namespace */
-
-bool SubObfuscator::obfuscate(Function *F) {
-    bool modified = false;
-    for(BasicBlock &BB : *F) {
-        modified = obfuscate(&BB) || modified;        
-    }
-    return modified;
-}
-
-bool SubObfuscator::obfuscate(BasicBlock *BB) {
-    bool modified = false;
-    std::vector<Instruction *> toIterateInst;
-    std::vector<Instruction *> toErase;
-    // Instructions after this will get moved from the block for
-    // fsub. Hence first storing all the instructions.
-    for(Instruction &I : *BB) {
-        toIterateInst.push_back(&I);
-    }
-    for(Instruction *I : toIterateInst) {
-        if(obfuscate(I)) {
-            modified = true;
-            toErase.push_back(I);
-        }
-    }
-    for(Instruction *I: toErase) {
-        I->eraseFromParent();
-    }
-    return modified;
-}
 
 bool SubObfuscator::obfuscate(Instruction *I) {
     if(I->getOpcode() == Instruction::Sub) {

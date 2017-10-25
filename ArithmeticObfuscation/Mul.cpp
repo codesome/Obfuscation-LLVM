@@ -4,39 +4,6 @@
 
 using namespace llvm;
 
-bool MulObfuscator::obfuscate(Function *F) {
-	bool modified = false;
-	std::vector<BasicBlock*> toIterate;
-    for(BasicBlock &BB : *F) {
-        toIterate.push_back(&BB);
-    }
-    for(BasicBlock *BB : toIterate) {
-        modified = obfuscate(BB) || modified;
-    }
-    return modified;
-}
-
-bool MulObfuscator::obfuscate(BasicBlock *BB) {
-	bool modified = false;
-    std::vector<Instruction *> toIterateInst;
-    std::vector<Instruction *> toErase;
-    // Instructions after this will get moved from the block for
-    // mul,fmul. Hence first storing all the instructions.
-    for(Instruction &I : *BB) {
-        toIterateInst.push_back(&I);
-    }
-    for(Instruction *I : toIterateInst) {
-        if(obfuscate(I)) {
-            modified = true;
-            toErase.push_back(I);
-        }
-    }
-    for(Instruction *I: toErase) {
-        I->eraseFromParent();
-    }
-    return modified;
-}
-
 bool MulObfuscator::obfuscate(Instruction *I) {
 	if(I->getOpcode() != Instruction::Mul)
 			return false;

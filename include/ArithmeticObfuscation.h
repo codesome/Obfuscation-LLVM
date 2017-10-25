@@ -4,30 +4,14 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/IRBuilder.h"
 using namespace llvm;
 
-/* Implemented in ArithmeticObfuscation/Add.cpp */
-/* NOTE: Obfuscates only add operation */
-class AddObfuscator {
-public:
-    /*____________________________________________________
-     *
-     * Obfuscates entire function
-     * @param Function* F, the function to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(Function *F);
+/*
+    Structure of AddObfuscator, SubObfuscator, 
+        MulObfuscator, SDivObfuscator, UDivObfuscator
 
-    /*____________________________________________________
-     *
-     * Obfuscates given basic block
-     * @param BasicBlock *BB, the basic block to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
-
-
-    /*____________________________________________________
+     *____________________________________________________
      *
      * Obfuscates given instruction
      * NOTE: Does not remove or erase the instruction 
@@ -35,159 +19,75 @@ public:
      *       Need to erase it manually.
      * @param Instruction *I, the instruction to obfuscate
      * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
+     *____________________________________________________
+    static bool obfuscate(Instruction *I);
+*/
+
+/* Implemented in ArithmeticObfuscation/Add.cpp */
+class AddObfuscator {
+public:
     static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/Sub.cpp */
-/* NOTE: Obfuscates only sub operation */
 class SubObfuscator {
-
 public:
-    /*____________________________________________________
-     *
-     * Obfuscates entire function
-     * @param Function* F, the function to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(Function *F);
-
-    /*____________________________________________________
-     *
-     * Obfuscates given basic block
-     * @param BasicBlock *BB, the basic block to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
-
-
-    /*____________________________________________________
-     *
-     * Obfuscates given instruction
-     * NOTE: Does not remove or erase the instruction 
-     *       from the block, but changes all the uses. 
-     *       Need to erase it manually.
-     * @param Instruction *I, the instruction to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
     static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/Mul.cpp */
-/* NOTE: Obfuscates only mul operation */
 class MulObfuscator {
-
 public:
-    /*____________________________________________________
-     *
-     * Obfuscates entire function
-     * @param Function* F, the function to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(Function *F);
-
-    /*____________________________________________________
-     *
-     * Obfuscates given basic block
-     * @param BasicBlock *BB, the basic block to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
-
-
-    /*____________________________________________________
-     *
-     * Obfuscates given instruction
-     * NOTE: Does not remove or erase the instruction 
-     *       from the block, but changes all the uses. 
-     *       Need to erase it manually.
-     * @param Instruction *I, the instruction to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
     static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/UDiv.cpp */
-/* NOTE: Obfuscates only udiv operation */
 class UDivObfuscator {
-
 public:
-    /*____________________________________________________
-     *
-     * Obfuscates entire function
-     * @param Function* F, the function to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(Function *F);
-
-    /*____________________________________________________
-     *
-     * Obfuscates given basic block
-     * @param BasicBlock *BB, the basic block to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
-
-
-    /*____________________________________________________
-     *
-     * Obfuscates given instruction
-     * NOTE: Does not remove or erase the instruction 
-     *       from the block, but changes all the uses. 
-     *       Need to erase it manually.
-     * @param Instruction *I, the instruction to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
     static bool obfuscate(Instruction *I);
 };
 
 /* Implemented in ArithmeticObfuscation/SDiv.cpp */
-/* NOTE: Obfuscates only sdiv operation */
 class SDivObfuscator {
-
 public:
-    /*____________________________________________________
-     *
-     * Obfuscates entire function
-     * @param Function* F, the function to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(Function *F);
-
-    /*____________________________________________________
-     *
-     * Obfuscates given basic block
-     * @param BasicBlock *BB, the basic block to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
-
-
-    /*____________________________________________________
-     *
-     * Obfuscates given instruction
-     * NOTE: Does not remove or erase the instruction 
-     *       from the block, but changes all the uses. 
-     *       Need to erase it manually.
-     * @param Instruction *I, the instruction to obfuscate
-     * @return true if IR is modified, false otherwise
-     *____________________________________________________*/
     static bool obfuscate(Instruction *I);
 };
 
+/* Implemented in ArithmeticObfuscation/ArithmeticObfuscationUtils.cpp */
 class ArithmeticObfuscationUtils {
 public:
     /*____________________________________________________
      *
-     * Obfuscates fadd or fsub
+     * Obfuscates binary float operation (a op b)
      * As there is only 2 line difference in fadd,fsub obfuscation 
      * implementation, both are clubbed into same function
      * NOTE: should be used only for fadd and fsub
      *
      * @param Instruction *I, the instruction to obfuscate
-     * @param bool isAdd, true if fadd, false if fsub
+     * @param double maxAllowedValue, the max allowed value for operands
+     *
+     * @param 
+     *        std::function<Value*(IRBuilder<>* ifThenBuilder, 
+     *              Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY)> ifThenCaller,
+     *        This is a function called to build the if.then block
+     *        @param:
+     *            int64: aXX = int64(a), bXX = int64(b)
+     *            floatType: aYY = a - floatType(aXX), bYY = b - floatType(bXX)
+     *        @return Value*, the result from if.then
+     *
+     * @param 
+     *        std::function<Value*(IRBuilder<>* ifElseBuilder, Value* a, Value* b)> ifElseCaller,
+     *        This is a function called to build the if.else block
+     *        @param
+     *            floatType: a, b
+     *        @return Value*, the result from if.else
+     * NOTE: Do not create break statements in both functions above
      *____________________________________________________*/
-    static void floatAddSubObfuscator(Instruction *I, bool isAdd);
+    static void floatObfuscator(
+        Instruction *I,
+        double maxAllowedValue,
+        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*)> ifThenCaller, 
+        std::function<Value*(IRBuilder<>*, Value*, Value*)> ifElseCaller);
 };
 
 class ArithmeticObfuscation : public FunctionPass {
@@ -198,6 +98,26 @@ public:
     ArithmeticObfuscation() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F);
+
+    /*____________________________________________________
+     *
+     * Obfuscates given basic block
+     * @param BasicBlock *BB, the basic block to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(BasicBlock *BB);
+
+    /*____________________________________________________
+     *
+     * Obfuscates given instruction
+     * NOTE: Does not remove or erase the instruction 
+     *       from the block, but changes all the uses. 
+     *       Need to erase it manually.
+     * @param Instruction *I, the instruction to obfuscate
+     * @return true if IR is modified, false otherwise
+     *____________________________________________________*/
+    static bool obfuscate(Instruction *I);
+
 };
 
 #endif
