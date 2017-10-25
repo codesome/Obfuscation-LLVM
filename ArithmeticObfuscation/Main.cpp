@@ -54,16 +54,23 @@ bool ArithmeticObfuscation::runOnFunction(Function &F) {
         // original instruction which got obfuscated
         std::vector<Instruction *> toErase;
         std::vector<BasicBlock*> toIterate;
+        std::vector<Instruction*> toIterateInst;
         for(BasicBlock &BB : F) {
           toIterate.push_back(&BB);
         }
         // Consider only existing basic blocks
         // Ignore basic blocks which have been created due to obfuscate call
         for(BasicBlock *BB : toIterate) {
+            toIterateInst.clear();
+            // Instructions after this will get moved from the block for
+            // mul,fadd,fsub,fmul. Hence first storing all the instructions.
             for(Instruction &I : *BB) {
-                if(obfuscate(&I)) {
+                toIterateInst.push_back(&I);
+            }
+            for(Instruction *I : toIterateInst) {
+                if(obfuscate(I)) {
                     iterModified = true;
-                    toErase.push_back(&I);
+                    toErase.push_back(I);
                 }
             }
         }

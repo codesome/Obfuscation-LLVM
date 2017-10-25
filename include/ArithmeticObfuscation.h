@@ -175,6 +175,21 @@ public:
     static bool obfuscate(Instruction *I);
 };
 
+class ArithmeticObfuscationUtils {
+public:
+    /*____________________________________________________
+     *
+     * Obfuscates fadd or fsub
+     * As there is only 2 line difference in fadd,fsub obfuscation 
+     * implementation, both are clubbed into same function
+     * NOTE: should be used only for fadd and fsub
+     *
+     * @param Instruction *I, the instruction to obfuscate
+     * @param bool isAdd, true if fadd, false if fsub
+     *____________________________________________________*/
+    static void floatAddSubObfuscator(Instruction *I, bool isAdd);
+};
+
 class ArithmeticObfuscation : public FunctionPass {
 
 public:
