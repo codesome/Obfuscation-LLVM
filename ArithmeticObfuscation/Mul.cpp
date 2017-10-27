@@ -2,16 +2,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 
-#include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "ArithmeticObfuscation.h"
-using namespace llvm;
-
-#define DEBUG_TYPE "arith-obfus"
-
-
 
 namespace {
 

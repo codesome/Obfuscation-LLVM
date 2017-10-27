@@ -5,15 +5,6 @@
 #include "ArithmeticObfuscation.h"
 
 
-#include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "ArithmeticObfuscation.h"
-
-
-#define DEBUG_TYPE "arith-obfus"
-
 using namespace llvm;
 
 namespace {
