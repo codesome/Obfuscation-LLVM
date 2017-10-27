@@ -24,7 +24,7 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     IRBuilder<> Builder(preHeader->getUniqueSuccessor()->getFirstNonPHI());
 
 
-    PHINode *phi = Builder.CreatePHI(i32, 2, Twine(".new"));
+    PHINode *phi = Builder.CreatePHI(i32, 2);
     phi->addIncoming(zero, preHeader);
     
     

@@ -5,7 +5,7 @@
 void ArithmeticObfuscationUtils::floatObfuscator(
         Instruction *I,
         double maxAllowedValue,
-        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*)> ifThenCaller, 
+        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*)> ifThenCaller, 
         std::function<Value*(IRBuilder<>*, Value*, Value*)> ifElseCaller) {
 
     Value* a = I->getOperand(0);
@@ -57,7 +57,7 @@ void ArithmeticObfuscationUtils::floatObfuscator(
     // bYY = b - bXXFloat = b - float(int64(b))
     Value *bYY = ifThenBuilder.CreateFSub(b,bXXFloat);
     
-    Value *ifThenResult = ifThenCaller(&ifThenBuilder, floatType, aXX, bXX, aYY, bYY);
+    Value *ifThenResult = ifThenCaller(&ifThenBuilder, floatType, aXX, bXX, aYY, bYY, aXXFloat, bXXFloat);
     ifThenBuilder.CreateStore(ifThenResult, result);
     ifThenBuilder.CreateBr(ifEndBB);
     

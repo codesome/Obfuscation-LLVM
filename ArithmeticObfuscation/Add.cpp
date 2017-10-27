@@ -3,6 +3,17 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "ArithmeticObfuscation.h"
+
+
+#include "llvm/Pass.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "ArithmeticObfuscation.h"
+
+
+#define DEBUG_TYPE "arith-obfus"
+
 using namespace llvm;
 
 namespace {
@@ -33,7 +44,7 @@ bool obfuscateInteger(Instruction *I) {
 
 bool obfuscateFloat(Instruction *I) {
     auto ifThenCaller = [](IRBuilder<>* ifThenBuilder, 
-        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY) {
+        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
         // pInt = aXX + bXX
         Value *pInt = ifThenBuilder->CreateAdd(aXX, bXX);
         // pFloat = int64(pInt) = int64(aXX + bXX)

@@ -2,9 +2,20 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 
+#include "llvm/Pass.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "ArithmeticObfuscation.h"
 using namespace llvm;
 
-bool MulObfuscator::obfuscate(Instruction *I) {
+#define DEBUG_TYPE "arith-obfus"
+
+
+
+namespace {
+
+bool obfuscateInteger(Instruction *I) {
 	if(I->getOpcode() != Instruction::Mul)
 			return false;
 	Type* type = I->getType();
@@ -116,4 +127,47 @@ bool MulObfuscator::obfuscate(Instruction *I) {
 
 	I->replaceAllUsesWith(addFinal);
 	return true;
+}
+
+bool obfuscateFloat(Instruction *I) {
+    auto ifThenCaller = [](IRBuilder<>* ifThenBuilder, 
+        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
+
+        // pInt = aXX * bXX
+        Value *pInt = ifThenBuilder->CreateMul(aXX, bXX);
+        // pFloat = int64(pInt) = int64(aXX * bXX)
+        Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
+        // qFloat = aXXFloat * bYY
+        Value *qFloat = ifThenBuilder->CreateFMul(aXXFloat,bYY);
+        // Addpq = pFloat + qFloat
+        Value* Addpq = ifThenBuilder->CreateFAdd(pFloat, qFloat);
+        // rFloat = aYY * bXXFloat
+        Value *rFloat = ifThenBuilder->CreateFMul(aYY,bXXFloat);
+        // sFloat = aYY * bYY
+        Value *sFloat = ifThenBuilder->CreateFMul(aYY,bYY);
+        // Addrs = rFloat + sFloat
+        Value* Addrs = ifThenBuilder->CreateFAdd(rFloat, sFloat);
+
+        // ifThenResult = Addpq + Addrs
+        return ifThenBuilder->CreateFAdd(Addpq, Addrs);
+    };
+    auto ifElseCaller = [](IRBuilder<>* ifElseBuilder, Value* a, Value* b) {
+        // a * b
+        return ifElseBuilder->CreateFMul(a,b);
+    };
+    ArithmeticObfuscationUtils::floatObfuscator(I, 3037000500.0, ifThenCaller, ifElseCaller);
+    return true;
+}
+
+} /* namespace */
+
+
+bool MulObfuscator::obfuscate(Instruction *I) {
+    if(I->getOpcode() == Instruction::Mul) {
+        return obfuscateInteger(I);
+    } else if (I->getOpcode() == Instruction::FMul) {
+        return obfuscateFloat(I);
+    } else {
+        return false;
+    }
 }

@@ -86,7 +86,7 @@ public:
     static void floatObfuscator(
         Instruction *I,
         double maxAllowedValue,
-        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*)> ifThenCaller, 
+        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*)> ifThenCaller, 
         std::function<Value*(IRBuilder<>*, Value*, Value*)> ifElseCaller);
 };
 

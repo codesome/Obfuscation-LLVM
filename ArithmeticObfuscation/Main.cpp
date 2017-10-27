@@ -23,6 +23,8 @@ bool ArithmeticObfuscation::obfuscate(Instruction *I) {
             return UDivObfuscator::obfuscate(I);
         case (Instruction::Mul):
             return MulObfuscator::obfuscate(I);
+        case (Instruction::FMul):
+            return MulObfuscator::obfuscate(I);
         default:
             return false;
     }
