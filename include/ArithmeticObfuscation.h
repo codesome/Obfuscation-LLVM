@@ -86,8 +86,8 @@ public:
     static void floatObfuscator(
         Instruction *I,
         double maxAllowedValue,
-        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*)> ifThenCaller, 
-        std::function<Value*(IRBuilder<>*, Value*, Value*)> ifElseCaller);
+        Value* (*ifThenCaller)(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*), 
+        Value* (*ifElseCaller)(IRBuilder<>*, Value*, Value*));
 };
 
 class ArithmeticObfuscation : public FunctionPass {

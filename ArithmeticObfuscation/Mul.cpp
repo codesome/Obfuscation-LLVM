@@ -119,32 +119,36 @@ bool obfuscateInteger(Instruction *I) {
 	return true;
 }
 
+Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
+
+	// pInt = aXX * bXX
+    Value *pInt = ifThenBuilder->CreateMul(aXX, bXX);
+    // pFloat = int64(pInt) = int64(aXX * bXX)
+    Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
+    // qFloat = aXXFloat * bYY
+    Value *qFloat = ifThenBuilder->CreateFMul(aXXFloat,bYY);
+    // Addpq = pFloat + qFloat
+    Value* Addpq = ifThenBuilder->CreateFAdd(pFloat, qFloat);
+    // rFloat = aYY * bXXFloat
+    Value *rFloat = ifThenBuilder->CreateFMul(aYY,bXXFloat);
+    // sFloat = aYY * bYY
+    Value *sFloat = ifThenBuilder->CreateFMul(aYY,bYY);
+    // Addrs = rFloat + sFloat
+    Value* Addrs = ifThenBuilder->CreateFAdd(rFloat, sFloat);
+
+    // ifThenResult = Addpq + Addrs
+    return ifThenBuilder->CreateFAdd(Addpq, Addrs);
+}
+
+Value* ifElseCaller(IRBuilder<>* ifElseBuilder, Value* a, Value* b) {
+
+	// a * b
+    return ifElseBuilder->CreateFMul(a,b);
+
+}
+
 bool obfuscateFloat(Instruction *I) {
-    auto ifThenCaller = [](IRBuilder<>* ifThenBuilder, 
-        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
 
-        // pInt = aXX * bXX
-        Value *pInt = ifThenBuilder->CreateMul(aXX, bXX);
-        // pFloat = int64(pInt) = int64(aXX * bXX)
-        Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
-        // qFloat = aXXFloat * bYY
-        Value *qFloat = ifThenBuilder->CreateFMul(aXXFloat,bYY);
-        // Addpq = pFloat + qFloat
-        Value* Addpq = ifThenBuilder->CreateFAdd(pFloat, qFloat);
-        // rFloat = aYY * bXXFloat
-        Value *rFloat = ifThenBuilder->CreateFMul(aYY,bXXFloat);
-        // sFloat = aYY * bYY
-        Value *sFloat = ifThenBuilder->CreateFMul(aYY,bYY);
-        // Addrs = rFloat + sFloat
-        Value* Addrs = ifThenBuilder->CreateFAdd(rFloat, sFloat);
-
-        // ifThenResult = Addpq + Addrs
-        return ifThenBuilder->CreateFAdd(Addpq, Addrs);
-    };
-    auto ifElseCaller = [](IRBuilder<>* ifElseBuilder, Value* a, Value* b) {
-        // a * b
-        return ifElseBuilder->CreateFMul(a,b);
-    };
     ArithmeticObfuscationUtils::floatObfuscator(I, 3037000500.0, ifThenCaller, ifElseCaller);
     return true;
 }

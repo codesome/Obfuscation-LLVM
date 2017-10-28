@@ -5,8 +5,8 @@
 void ArithmeticObfuscationUtils::floatObfuscator(
         Instruction *I,
         double maxAllowedValue,
-        std::function<Value*(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*)> ifThenCaller, 
-        std::function<Value*(IRBuilder<>*, Value*, Value*)> ifElseCaller) {
+        Value* (*ifThenCaller)(IRBuilder<>*, Type*, Value*, Value*, Value*, Value*, Value*, Value*), 
+        Value* (*ifElseCaller)(IRBuilder<>*, Value*, Value*)) {
 
     Value* a = I->getOperand(0);
     Value* b = I->getOperand(1);

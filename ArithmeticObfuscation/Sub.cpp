@@ -29,22 +29,28 @@ bool obfuscateInteger(Instruction *I) {
     return true;
 }
 
+Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
+
+    // pInt = aXX - bXX
+    Value *pInt = ifThenBuilder->CreateSub(aXX, bXX);
+    // pFloat = int64(pInt) = int64(aXX - bXX)
+    Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
+    // qFloat = aYY - bYY
+    Value *qFloat = ifThenBuilder->CreateFSub(aYY, bYY);
+    // ifThenResult = pFloat + qFloat
+    return ifThenBuilder->CreateFAdd(pFloat, qFloat);
+
+}
+
+Value* ifElseCaller(IRBuilder<>* ifElseBuilder, Value* a, Value* b){
+
+    // a - b
+    return ifElseBuilder->CreateFSub(a,b);      
+}
+
+
 bool obfuscateFloat(Instruction *I) {
-    auto ifThenCaller = [](IRBuilder<>* ifThenBuilder, 
-        Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
-        // pInt = aXX - bXX
-        Value *pInt = ifThenBuilder->CreateSub(aXX, bXX);
-        // pFloat = int64(pInt) = int64(aXX - bXX)
-        Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
-        // qFloat = aYY - bYY
-        Value *qFloat = ifThenBuilder->CreateFSub(aYY, bYY);
-        // ifThenResult = pFloat + qFloat
-        return ifThenBuilder->CreateFAdd(pFloat, qFloat);
-    };
-    auto ifElseCaller = [](IRBuilder<>* ifElseBuilder, Value* a, Value* b) {
-        // a - b
-        return ifElseBuilder->CreateFSub(a,b);
-    };
+
     ArithmeticObfuscationUtils::floatObfuscator(I, 4611686018427387903.0, ifThenCaller, ifElseCaller);
     return true;
 }
