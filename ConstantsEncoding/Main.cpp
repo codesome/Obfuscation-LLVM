@@ -10,8 +10,8 @@ using namespace llvm;
 
 bool ConstantsEncoding::runOnModule(Module &M) {
 	for(Module::global_iterator it = M.global_begin(); it!=M.global_end(); it++) {
-		ConstantsEncodingUtils::encode(&*it);
-		
+		int offset = ConstantsEncodingUtils::encode(&*it);
+		ConstantsEncodingUtils::decode(&*it, offset);
 	}
     return true;
 }
