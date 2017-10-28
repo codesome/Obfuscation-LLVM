@@ -3,6 +3,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,14 +21,14 @@ public:
 	static void decode(GlobalVariable*, int);
 };
 
-class ConstantsEncoding : public FunctionPass {
+class ConstantsEncoding : public ModulePass {
 
 public:
     static char ID;
 
-    ConstantsEncoding() : FunctionPass(ID) {}
+    ConstantsEncoding() : ModulePass(ID) {}
 
-    bool runOnFunction(Function &F);
+    bool runOnModule(Module &M);
 
 };
 

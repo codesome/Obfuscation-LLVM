@@ -1,5 +1,6 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "ConstantsEncoding.h"
@@ -7,7 +8,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "const-encoding"
 
-bool ConstantsEncoding::runOnFunction(Function &F) {
+bool ConstantsEncoding::runOnModule(Module &M) {
+	for(Module::global_iterator it = M.global_begin(); it!=M.global_end(); it++) {
+		dbgs() << *it << "\n";
+	}
     return true;
 }
 
