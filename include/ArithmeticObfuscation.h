@@ -11,7 +11,7 @@ using namespace llvm;
     Structure of AddObfuscator, SubObfuscator, 
         MulObfuscator, SDivObfuscator, UDivObfuscator
 
-     *____________________________________________________
+     *_____________________________________________________
      *
      * Obfuscates given instruction
      * NOTE: Does not remove or erase the instruction 
@@ -19,7 +19,7 @@ using namespace llvm;
      *       Need to erase it manually.
      * @param Instruction *I, the instruction to obfuscate
      * @return true if IR is modified, false otherwise
-     *____________________________________________________
+     *_____________________________________________________
     static bool obfuscate(Instruction *I);
 */
 

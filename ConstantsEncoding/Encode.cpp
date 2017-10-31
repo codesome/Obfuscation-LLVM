@@ -6,7 +6,7 @@
 #include "ConstantsEncoding.h"
 using namespace llvm;
 
-int ConstantsEncodingUtils::encode(GlobalVariable* globalVar){
+int ConstantsEncodingUtils::encode(GlobalVariable* globalVar, int *stringLength){
 
 	// Converting global variable to constant
 	Constant* constValue = globalVar->getInitializer();
@@ -18,8 +18,9 @@ int ConstantsEncodingUtils::encode(GlobalVariable* globalVar){
 	int randomNumber = rand() % 125 + 1;
 
 	// Encoding string by adding the random number in each character
-	unsigned len = str.length();
-	for(unsigned i=0;i<len;i++){
+	int len = str.length();
+	*stringLength = len;
+	for(int i=0;i<len;i++){
 		str[i] = 1+(str[i]+randomNumber)%127;
 	}
 

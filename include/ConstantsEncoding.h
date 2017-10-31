@@ -16,9 +16,29 @@ using namespace llvm;
 
 class ConstantsEncodingUtils {
 public:
-	static int encode(GlobalVariable*);
+    /*____________________________________________________
+     *
+     * Encodes the global variable and replaces encoded
+     * constant in IR
+     * NOTE: Only encode for string is implemented
+     *
+     * @param GlobalVariabel* globalVar, variable to encode
+     * @param int *stringLength, the string length will be stored in this
+     * @return int, the offset used to obfuscate
+     *____________________________________________________*/
+    static int encode(GlobalVariable* globalVar, int *stringLength);
 
-	static void decode(GlobalVariable*, int);
+    /*____________________________________________________
+     *
+     * Adds inline decode function in IR whereever 
+     * the constant is used
+     * NOTE: Only decode for string is implemented
+     *
+     * @param GlobalVariabel* globalVar, variable to decode in IR
+     * @param int stringLength, the encoded string length
+     * @param int offset, the offset used to encode
+     *____________________________________________________*/
+    static void decode(GlobalVariable* globalVar, int stringLength, int offset);
 };
 
 class ConstantsEncoding : public ModulePass {

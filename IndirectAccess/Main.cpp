@@ -17,6 +17,8 @@ using namespace llvm;
 
 namespace {
 
+// TODO : add flag to allow float obfuscation, disble by default 
+
 /*___________________________________________________________
  *
  * Performs a DFS on the loops and populates the vector lsi

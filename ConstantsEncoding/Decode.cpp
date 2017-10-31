@@ -8,51 +8,102 @@ using namespace llvm;
 
 namespace {
 
+/*___________________________________________________________________
+ *
+ * Populates the body of loop used in decode
+ *
+ * @param IRBuilder<>* loopBodyBuilder, the builder of the body
+ * @param LLVMContext& context, as the name says
+ * @param GlobalVariable *globalVar, the variable to be decoded
+ * @param Value *iterAlloca, the register allocated as loop iterator
+ * @param Value *newStrAlloca, new string allocated for decoded result
+ * @param int offset, offset used while encoding
+ *___________________________________________________________________*/
 void populateBody(IRBuilder<>* loopBodyBuilder, LLVMContext& context, 
-    GlobalVariable *globalString, Value *iterAlloca, Value *newStrAlloca, int offset) {
+    GlobalVariable *globalVar, Value *iterAlloca, Value *newStrAlloca, int offset) {
 
+    // Values needed
     Type* i8 = Type::getInt8Ty(context);
     Value* zero = ConstantInt::get(Type::getInt32Ty(context), 0);
     Value* v126 = ConstantInt::get(i8, 126);
     Value* v127 = ConstantInt::get(i8, 127);
     Value* offsetValue = ConstantInt::get(i8, offset);
-    
+
+    // getting character at index=iterator
     Value *iterBodyLoad = loopBodyBuilder->CreateLoad(iterAlloca);
     std::vector<Value*> idxVector;
     idxVector.push_back(zero);
     idxVector.push_back(iterBodyLoad);
     ArrayRef<Value*> idxListBody(idxVector);
-    Value *bodyGlobalVarGEP = loopBodyBuilder->CreateInBoundsGEP(globalString, idxListBody);
+    // character from global variable
+    Value *bodyGlobalVarGEP = loopBodyBuilder->CreateInBoundsGEP(globalVar, idxListBody);
+    // character from new string
     Value *bodyNewStrGEP = loopBodyBuilder->CreateInBoundsGEP(newStrAlloca, idxListBody);
     
+    // ascii value of global variable character
     Value *ascii = loopBodyBuilder->CreateLoad(bodyGlobalVarGEP);
+    // ascii + 126
     Value *add1 = loopBodyBuilder->CreateAdd(ascii, v126);
+    // (ascii + 126)%127
     Value *rem1 = loopBodyBuilder->CreateURem(add1, v127);
+    // (ascii + 126)%127 - offset
     Value *sub = loopBodyBuilder->CreateSub(rem1, offsetValue);
+    // (ascii + 126)%127 - offset + 127
     Value *add2 = loopBodyBuilder->CreateAdd(sub, v127);
+    // ((ascii + 126)%127 - offset + 127)%127
     Value *rem2 = loopBodyBuilder->CreateURem(add2, v127);
+    // decoded_character = ((ascii + 126)%127 - offset + 127)%127
     loopBodyBuilder->CreateStore(rem2, bodyNewStrGEP);
 }
 
+/*___________________________________________________________________
+ *
+ * Builds the conditions in the loop latch of decoding loop
+ *
+ * @param IRBuilder<>* loopLatchBuilder, the builder for loop latch
+ * @param Value *iterAlloca, the register allocated as loop iterator
+ * @param Value *loopBound, Value* for string length 
+ * @param Value *one, Value* for 1
+ * NOTE: type of iterAlloca, loopBound and one should be same
+ *___________________________________________________________________*/
 Value* populateLatch(IRBuilder<>* loopLatchBuilder, Value *iterAlloca, Value *loopBound, Value *one) {
+    // iterator++
     Value *iterLoad = loopLatchBuilder->CreateLoad(iterAlloca);
     Value *iterIncr = loopLatchBuilder->CreateAdd(iterLoad, one);
     loopLatchBuilder->CreateStore(iterIncr, iterAlloca);
+    // iterator < loopBound
     return loopLatchBuilder->CreateICmpSLT(iterIncr, loopBound);
 }
 
-Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalString, 
+/*___________________________________________________________________
+ *
+ * Add null character at the end of decoded string
+ *
+ * @param IRBuilder<>* loopEndBuilder, the builder for loop end
+ * @param GlobalVariable *globalVar, the variable to be decoded
+ * @param Value *newStrAlloca, new string allocated for decoded result
+ * @param Value *loopBound, Value* for string length 
+ * @param Value *zero, Value* for 0
+ * NOTE: type of loopBound and zero should be same
+ * @return Value*, the decoded string (after getelementptr)
+ *___________________________________________________________________*/
+Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar, 
     Value *newStrAlloca, Value *zero, Value *loopBound) {
     
+    // copying last character from string, usually null
+    // this should not be decoded
     std::vector<Value*> idxVector;
     idxVector.push_back(zero);
     idxVector.push_back(loopBound);
     ArrayRef<Value*> idxListEnd1(idxVector);
-    Value *bodyGlobalVarGEP = loopEndBuilder->CreateInBoundsGEP(globalString, idxListEnd1);
-    Value *bodyNewStrGEP = loopEndBuilder->CreateInBoundsGEP(newStrAlloca, idxListEnd1);
+    // Encoded string last character
+    Value *bodyGlobalVarGEP = loopEndBuilder->CreateInBoundsGEP(globalVar, idxListEnd1);
     Value *ascii = loopEndBuilder->CreateLoad(bodyGlobalVarGEP);
+    // new string last character
+    Value *bodyNewStrGEP = loopEndBuilder->CreateInBoundsGEP(newStrAlloca, idxListEnd1);
     loopEndBuilder->CreateStore(ascii, bodyNewStrGEP);
     
+    // getting the string from the allocated variable
     idxVector.clear();
     idxVector.push_back(zero);
     idxVector.push_back(zero);
@@ -60,38 +111,58 @@ Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalString,
     return loopEndBuilder->CreateInBoundsGEP(newStrAlloca, idxListEnd2);
 }
 
-void inlineDecode(GlobalVariable *globalString, Value *v, Instruction *I, int offset) {
+/*___________________________________________________________________
+ *
+ * Inlines caesar cipher decode algorithm in IR
+ *
+ * @param GlobalVariable *globalVar, the variable to be decoded
+ * @param Value *originalValue, the original use of encoded string 
+ *              in the IR which is to be replaced with decoded value
+ * @param Instruction *I, instruction just before the use of originalValue 
+ *  (if value is part of instruction), else the originalValue as Instruction.
+ *        Decode algorithm is built just before this instruction.
+ * @param int offset, offset used while encoding
+ *___________________________________________________________________*/
+void inlineDecode(GlobalVariable *globalVar, int stringLength, Value *originalValue, Instruction *I, int offset) {
 
-    static LLVMContext& context = globalString->getContext();
-    Constant *constString = globalString->getInitializer();
-    ConstantDataArray *csa = cast<ConstantDataArray>(constString);
-    std::string str = csa->getAsCString();
-    int stringLength = str.length();
+    static LLVMContext& context = globalVar->getContext();
+    // Values required later
     Type* i32 = Type::getInt32Ty(context);
     Value* zero = ConstantInt::get(i32, 0);
     Value* one = ConstantInt::get(i32, 1);
     Value* loopBound = ConstantInt::get(i32, stringLength);
     
+    // Creating new basic blocks for the loop
     Function *F = I->getParent()->getParent();
+    // new block before the cycle for loop
     BasicBlock* loopHeader = BasicBlock::Create(context,"for.head",F);
+    // main loop body which will hold decode logic
     BasicBlock* loopBody = BasicBlock::Create(context,"for.body",F);
+    // loop latch of loop, takes from i=0 -> i=stringLength-1
     BasicBlock* loopLatch = BasicBlock::Create(context,"for.inc",F);
+    // Block to clean up some parts of decode and replace uses
     BasicBlock* loopEnd = BasicBlock::Create(context,"for.end",F);
+
+    // from this instruction, everything has to be moved to for.end
     Instruction* toMoveInst = I->getNextNode();
+
+    // break to the loop
     IRBuilder<> builder(I);
     builder.CreateBr(loopHeader);
 
     // HEADER
     IRBuilder<> loopHeaderBuilder(loopHeader);
-    PointerType *pType = globalString->getType();
+    PointerType *pType = globalVar->getType();
+    // allocating new string for the decode result
     Value *newStrAlloca = loopHeaderBuilder.CreateAlloca(pType->getElementType());
+    // loop iterator, goes from 0 to stringLength-1
     Value *iterAlloca = loopHeaderBuilder.CreateAlloca(i32);
     loopHeaderBuilder.CreateStore(zero, iterAlloca);
     loopHeaderBuilder.CreateBr(loopBody);
 
     // BODY
     IRBuilder<> loopBodyBuilder(loopBody);
-    populateBody(&loopBodyBuilder, context, globalString, iterAlloca, newStrAlloca, offset);
+    populateBody(&loopBodyBuilder, context, globalVar, iterAlloca, newStrAlloca, offset);
     loopBodyBuilder.CreateBr(loopLatch);
 
     // LATCH
@@ -101,8 +172,10 @@ void inlineDecode(GlobalVariable *globalString, Value *v, Instruction *I, int of
 
     // END
     IRBuilder<> loopEndBuilder(loopEnd);
-    Value *newStrGEP = populateEnd(&loopEndBuilder, globalString, newStrAlloca, zero, loopBound);
+    Value *newStrGEP = populateEnd(&loopEndBuilder, globalVar, newStrAlloca, zero, loopBound);
 
+    // Moving instruction from I till end in the original block to 
+    // for.end (loopEnd) Block 
     Instruction* next = dyn_cast<Instruction>(newStrGEP);
     I->removeFromParent();
     I->insertAfter(next);
@@ -117,30 +190,31 @@ void inlineDecode(GlobalVariable *globalString, Value *v, Instruction *I, int of
         II->insertAfter(next);
         next = II;
     }
-    v->replaceAllUsesWith(newStrGEP);
+    originalValue->replaceAllUsesWith(newStrGEP);
 }
-
 
 } /* namespace */
 
-void ConstantsEncodingUtils::decode(GlobalVariable* globalString, int offset) {
-
-    if(globalString->isConstant() && globalString->hasInitializer()) {
-        for(User *U: globalString->users()) {
-            if(Value *val = dyn_cast<Value>(U)) {
-                Instruction *I = dyn_cast<Instruction>(U);
-                if(!I) {
-                    for(User *uu: val->users()) {
-                        I = dyn_cast<Instruction>(uu);
-                        if(I) break;
-                    }
+void ConstantsEncodingUtils::decode(GlobalVariable* globalVar, int stringLength, int offset) {
+    for(User *U: globalVar->users()) {
+        if(Value *val = dyn_cast<Value>(U)) {
+            Instruction *I = dyn_cast<Instruction>(U);
+            if(!I) {
+                // The value was an operand in an instruction
+                // Hence getting the first user of value, which is the
+                // instruction before which we should decode 
+                for(User *uu: val->users()) {
+                    I = dyn_cast<Instruction>(uu);
+                    if(I) break;
                 }
-                if(!I) continue;
+            }
+            // else The value itself is the instruction
 
-                inlineDecode(globalString, val, I, offset);
-
+            if(I) {
+                // Constant is used, hence decode it
+                // else skip decoding
+                inlineDecode(globalVar, stringLength, val, I, offset);
             }
         }
     }
-
 }
