@@ -103,13 +103,16 @@ public:
      *
      * Obfuscates given basic block
      * @param BasicBlock *BB, the basic block to obfuscate
+     * @param bool obfuscateFloat, true if floating point 
+        operation has to be obfuscated, false otherwise
      * @return true if IR is modified, false otherwise
      *____________________________________________________*/
-    static bool obfuscate(BasicBlock *BB);
+    static bool obfuscate(BasicBlock *BB, bool obfuscateFloat);
 
     /*____________________________________________________
      *
      * Obfuscates given instruction
+     * Does not obfuscate floating point binary oprations
      * NOTE: Does not remove or erase the instruction 
      *       from the block, but changes all the uses. 
      *       Need to erase it manually.
@@ -117,6 +120,8 @@ public:
      * @return true if IR is modified, false otherwise
      *____________________________________________________*/
     static bool obfuscate(Instruction *I);
+    // Same as above with floats enabled
+    static bool obfuscateWithFloat(Instruction *I);
 
 };
 
