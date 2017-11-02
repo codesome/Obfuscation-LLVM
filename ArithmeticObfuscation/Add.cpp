@@ -37,7 +37,7 @@ Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, Value* aXX, Val
 
     // pInt = aXX + bXX
     Value *pInt = ifThenBuilder->CreateAdd(aXX, bXX);
-    // pFloat = int64(pInt) = int64(aXX + bXX)
+    // pFloat = float(pInt) = float(aXX + bXX)
     Value *pFloat = ifThenBuilder->CreateSIToFP(pInt, floatType);
     // qFloat = aYY + bYY
     Value *qFloat = ifThenBuilder->CreateFAdd(aYY, bYY);

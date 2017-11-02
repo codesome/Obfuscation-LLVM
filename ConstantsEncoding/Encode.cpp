@@ -6,7 +6,7 @@
 #include "ConstantsEncoding.h"
 using namespace llvm;
 
-int ConstantsEncodingUtils::encode(GlobalVariable* globalVar, int *stringLength){
+int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 
 	// Converting global variable to constant
 	Constant* constValue = globalVar->getInitializer();
@@ -30,4 +30,8 @@ int ConstantsEncodingUtils::encode(GlobalVariable* globalVar, int *stringLength)
 	
 	// returning the value of random number
 	return randomNumber;
+}
+
+int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *originalStringLength){
+	return 0;
 }

@@ -195,7 +195,7 @@ void inlineDecode(GlobalVariable *globalVar, int stringLength, Value *originalVa
 
 } /* namespace */
 
-void ConstantsEncodingUtils::decode(GlobalVariable* globalVar, int stringLength, int offset) {
+void CaesarCipher::decode(GlobalVariable* globalVar, int stringLength, int offset) {
     for(User *U: globalVar->users()) {
         if(Value *val = dyn_cast<Value>(U)) {
             Instruction *I = dyn_cast<Instruction>(U);
@@ -217,4 +217,8 @@ void ConstantsEncodingUtils::decode(GlobalVariable* globalVar, int stringLength,
             }
         }
     }
+}
+
+void BitEncodingAndDecoding::decode(GlobalVariable* globalVar, int originalStringLength, int offset) {
+
 }

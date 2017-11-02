@@ -31,6 +31,7 @@ void ArithmeticObfuscationUtils::floatObfuscator(
     // Takes result of if.then or if.else and replaces with original instruction
     BasicBlock* ifEndBB = BasicBlock::Create(context,"if.end",I->getParent()->getParent());
     
+    // TODO: add lower bound
     // if(a<INT_MAX64_DIV_2_FP && b<INT_MAX64_DIV_2_FP)
     // then obfuscate, a+b can never overflow i64
     // else no, because a+b can overflow i64

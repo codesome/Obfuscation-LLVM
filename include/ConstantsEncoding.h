@@ -14,7 +14,7 @@
 using namespace llvm;
 
 
-class ConstantsEncodingUtils {
+class CaesarCipher {
 public:
     /*____________________________________________________
      *
@@ -39,6 +39,12 @@ public:
      * @param int offset, the offset used to encode
      *____________________________________________________*/
     static void decode(GlobalVariable* globalVar, int stringLength, int offset);
+};
+
+class BitEncodingAndDecoding {
+public:
+    static int encode(GlobalVariable* globalVar, int *originalStringLength);
+    static void decode(GlobalVariable* globalVar, int originalStringLength, int nBits);
 };
 
 class ConstantsEncoding : public ModulePass {

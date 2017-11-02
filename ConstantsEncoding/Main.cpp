@@ -16,8 +16,8 @@ bool ConstantsEncoding::runOnModule(Module &M) {
 		// TODO: check if its string or any other constant
 		globalVar = &*it;
 		if(globalVar->isConstant() && globalVar->hasInitializer()) {
-			int offset = ConstantsEncodingUtils::encode(globalVar, &stringLength);
-			ConstantsEncodingUtils::decode(&*it, stringLength, offset);
+			int offset = CaesarCipher::encode(globalVar, &stringLength);
+			CaesarCipher::decode(&*it, stringLength, offset);
 		}
 	}
     return true;
