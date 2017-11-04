@@ -43,8 +43,8 @@ public:
 
 class BitEncodingAndDecoding {
 public:
-    static int encode(GlobalVariable* globalVar, int *originalStringLength, Module *M);
-    static void decode(GlobalVariable* globalVar, int originalStringLength, int nBits);
+    static int encode(GlobalVariable *globalVar, GlobalVariable **newStringGlobalVar, int *originalStringLength, Module *M);
+    static void decode(GlobalVariable *globalVar, GlobalVariable *newStringGlobalVar, int originalStringLength, int nBits);
 };
 
 class ConstantsEncoding : public ModulePass {

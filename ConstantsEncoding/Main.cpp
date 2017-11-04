@@ -9,37 +9,34 @@ using namespace llvm;
 
 #define DEBUG_TYPE "const-encoding"
 
-template<typename T>
-void ReplaceUnsafe(T *from, T *to) {
-	for(Value::use_iterator it = from->use_begin(); it!=from->use_end(); it++ ) {
-    	auto *U = &*it;
-    	U->set(to);
-	}
-    from->eraseFromParent();
-}
-
 bool ConstantsEncoding::runOnModule(Module &M) {
 	int stringLength;
     static LLVMContext& context = M.getContext();
 
+    // For bit encoding and decoding new global variable will be 
+    // created. Hence string the original global variables in a 
+    // vector and iterating over it.
 	GlobalVariable *globalVar;
 	std::vector<GlobalVariable*> gvs;
 	for(Module::global_iterator it = M.global_begin(); it!=M.global_end(); it++) {
 		// TODO: check if its string or any other constant
 		gvs.push_back(&*it);
 	}
- //  	std::string svalue = "this is a string";
- //  	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),svalue.size()+1);
-	// Constant *aString = ConstantDataArray::getString(context, "this is a string", true);
- //  	GlobalVariable *GV = new GlobalVariable( M, Ty, true, GlobalValue::PrivateLinkage, aString);
- //  	GV->setAlignment(1);
-
 	for(GlobalVariable *globalVar : gvs) {
 		if(globalVar->isConstant() && globalVar->hasInitializer()) {
-			// globalVar->replaceAllUsesWith(GV);
-			// ReplaceUnsafe(globalVar,GV);
-			int offset = BitEncodingAndDecoding::encode(globalVar, &stringLength, &M);
-			BitEncodingAndDecoding::decode(globalVar, stringLength, 2);
+			// TODO : select one randomly
+			// Caesar
+			if(rand()%2) {
+				int offset = CaesarCipher::encode(globalVar, &stringLength);
+				CaesarCipher::decode(globalVar, stringLength, offset);
+			} else {
+				// Bit encoding and decoding
+				GlobalVariable *newStringGlobalVar = nullptr;
+				int nBits = BitEncodingAndDecoding::encode(globalVar, &newStringGlobalVar, &stringLength, &M);
+				BitEncodingAndDecoding::decode(globalVar, newStringGlobalVar, stringLength, nBits);
+				globalVar->eraseFromParent();
+			}
+
 		}
 	}
 

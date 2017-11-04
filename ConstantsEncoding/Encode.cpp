@@ -35,7 +35,7 @@ int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 
 
 
-int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength, Module *M){
+int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **newStringGlobalVar, int *stringLength, Module *M){
 
 	// Converting global variable to constant
 	Constant* constValue = globalVar->getInitializer();
@@ -67,10 +67,7 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
 			s[pos] = (char)randomNumber;
 			char q = s[pos] & y;
 			char fv = p | q;
-			if(fv==0) {
-				fv = y;
-			}
-			s[pos]=fv;
+			s[pos]= (fv==0)? y: fv; // if 0, put 11111100
 			str[i]=str[i]>>n;
 
 		}
@@ -80,13 +77,9 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
     static LLVMContext& context = globalVar->getContext();
 	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(s)+1);
 	Constant *aString = ConstantDataArray::getString(context, s, true);
-  	GlobalVariable *GV = new GlobalVariable( *M, Ty, true, GlobalValue::PrivateLinkage, aString);
-  	GV->setAlignment(1);
-
-
-	// Constant *encodedStr = ConstantDataArray::getString(globalVar->getContext(), s, true);
-	// // Modifing global variable in IR
-	// globalVar->setInitializer(encodedStr);
+	// giving new variable to decode
+  	*newStringGlobalVar = new GlobalVariable(*M, Ty, true, GlobalValue::PrivateLinkage, aString);
+  	(*newStringGlobalVar)->setAlignment(1);
 
 	return n;
 }
