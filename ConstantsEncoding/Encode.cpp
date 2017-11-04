@@ -46,11 +46,11 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
 
 	// Encoding string by adding the random number in each character
 	int len = str.length();
-	dbgs() << len << " :: len\n";
 	int n  = 2;
 	int step = 8/n;
 	*stringLength = len*step;
-	char *s = new char[step*len];
+	char *s = new char[step*len+1];
+	s[step*len] = 0;
 	char mask = 1;
     for(int i=1; i<n; i++) {
         mask = (mask<<1) + 1;
@@ -67,6 +67,9 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
 			s[pos] = (char)randomNumber;
 			char q = s[pos] & y;
 			char fv = p | q;
+			if(fv==0) {
+				fv = y;
+			}
 			s[pos]=fv;
 			str[i]=str[i]>>n;
 
@@ -74,13 +77,9 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
 
 	}
 
-	dbgs()<<s<<"\n";
     static LLVMContext& context = globalVar->getContext();
-	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),(len*step)+1+1);
-	Constant *aString = ConstantDataArray::getString(context, s, false);
-	dbgs() << strlen(s) << "\n";
-	dbgs() << len*step + 1 << "\n";
-	dbgs() << *(aString->getType()) << "\n";
+	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(s)+1);
+	Constant *aString = ConstantDataArray::getString(context, s, true);
   	GlobalVariable *GV = new GlobalVariable( *M, Ty, true, GlobalValue::PrivateLinkage, aString);
   	GV->setAlignment(1);
 
@@ -89,5 +88,5 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar, int *stringLength,
 	// // Modifing global variable in IR
 	// globalVar->setInitializer(encodedStr);
 
-	return 0;
+	return n;
 }
