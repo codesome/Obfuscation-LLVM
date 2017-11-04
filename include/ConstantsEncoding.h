@@ -43,7 +43,7 @@ public:
 
 class BitEncodingAndDecoding {
 public:
-    static int encode(GlobalVariable* globalVar, int *originalStringLength);
+    static int encode(GlobalVariable* globalVar, int *originalStringLength, Module *M);
     static void decode(GlobalVariable* globalVar, int originalStringLength, int nBits);
 };
 
