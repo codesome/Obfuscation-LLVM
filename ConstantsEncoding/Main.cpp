@@ -10,21 +10,17 @@ using namespace llvm;
 #define DEBUG_TYPE "const-encoding"
 
 bool ConstantsEncoding::runOnModule(Module &M) {
-	int stringLength;
-    static LLVMContext& context = M.getContext();
-
     // For bit encoding and decoding new global variable will be 
     // created. Hence string the original global variables in a 
     // vector and iterating over it.
-	GlobalVariable *globalVar;
 	std::vector<GlobalVariable*> gvs;
 	for(Module::global_iterator it = M.global_begin(); it!=M.global_end(); it++) {
 		// TODO: check if its string or any other constant
 		gvs.push_back(&*it);
 	}
+	int stringLength;
 	for(GlobalVariable *globalVar : gvs) {
 		if(globalVar->isConstant() && globalVar->hasInitializer()) {
-			// TODO : select one randomly
 			// Caesar
 			if(rand()%2) {
 				int offset = CaesarCipher::encode(globalVar, &stringLength);

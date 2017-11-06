@@ -67,7 +67,7 @@ void populateBodyCaesar(IRBuilder<>* loopBodyBuilder, LLVMContext& context,
  * @param GlobalVariable *globalVar, the variable to be decoded
  * @param Value *iterAlloca, the register allocated as loop iterator
  * @param Value *newStrAlloca, new string allocated for decoded result
- * @param int offset, offset used while encoding
+ * @param int nBits, number of bits encoded in each character
  *___________________________________________________________________*/
 void populateBodyBitEncodingAndDecoding(IRBuilder<>* loopBodyBuilder, LLVMContext& context, 
     GlobalVariable *globalVar, Value *iterAlloca, Value *newStrAlloca, int nBits) {
@@ -145,8 +145,9 @@ Value* populateLatch(IRBuilder<>* loopLatchBuilder, Value *iterAlloca, Value *lo
  * @param IRBuilder<>* loopEndBuilder, the builder for loop end
  * @param GlobalVariable *globalVar, the variable to be decoded
  * @param Value *newStrAlloca, new string allocated for decoded result
- * @param Value *loopBound, Value* for string length 
  * @param Value *zero, Value* for 0
+ * @param Value *loopBound, Value* for string length 
+ * @param Value *newStrEnd, last index for decoded string 
  * NOTE: type of loopBound and zero should be same
  * @return Value*, the decoded string (after getelementptr)
  *___________________________________________________________________*/
@@ -182,9 +183,9 @@ Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar,
 
 /*___________________________________________________________________________
  *
- * Inlines caesar cipher decode algorithm in IR
+ * Inlines decode algorithm in IR
  *
- * @param GlobalVariable *globalVar, the variable to be decoded
+ * @param GlobalVariable *globalVar, the encoded variable
  * @param int *loopBoundInt, the encoded string length
  * @param int *loopIterStep, iterator+=loopIterStep in loop latch
  * @param Value *originalValue, the original use of encoded string 
@@ -193,8 +194,11 @@ Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar,
  *  (if value is part of instruction), else the originalValue as Instruction.
  *        Decode algorithm is built just before this instruction.
  * @param int param, offset (or) nBits used while encoding
+ * @param (*populateBody), function used to populate the decode loop body.
+ *              For aruments of function, check populateBody functions above
  * @param GlobalVariable *newStringVar, new encoded variable created
- *                if this is given, it is considered as encoded variable
+ *        if this is given, it is considered as encoded variable
+ *        and globalVar will be deleted from IR
  *___________________________________________________________________________*/
 void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, int loopIterStep, Value *originalValue, Instruction *I, int param,
     void (*populateBody)(IRBuilder<>*,LLVMContext&,GlobalVariable*,Value*,Value*,int), GlobalVariable *newStringVar=nullptr) {
@@ -236,7 +240,7 @@ void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, in
     } else {
         newStrAlloca = loopHeaderBuilder.CreateAlloca(ArrayType::get(Type::getInt8Ty(context), (loopBoundInt/loopIterStep)+1));
     }
-    // loop iterator, goes from 0 to stringLength-1
+    // loop iterator, goes from 0 to stringLength-1, with steps of loopIterStep
     Value *iterAlloca = loopHeaderBuilder.CreateAlloca(i32);
     loopHeaderBuilder.CreateStore(zero, iterAlloca);
     loopHeaderBuilder.CreateBr(loopBody);
@@ -279,23 +283,57 @@ void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, in
     originalValue->replaceAllUsesWith(newStrGEP);
 }
 
+/*___________________________________________________________________________
+ *
+ * @param User *U, a use of global variable
+ * @param Value *val, Value associated with Use *U
+ * @return Instruction*, instruction just before U or val (or U itself)
+ *___________________________________________________________________________*/
+Instruction* getInstructionForValue(User *U, Value *val) {
+    Instruction *I = dyn_cast<Instruction>(U);
+    if(!I) {
+        // The value was an operand in an instruction
+        // Hence getting the first user of value, which is the
+        // instruction before which we should decode 
+        for(User *uu: val->users()) {
+            I = dyn_cast<Instruction>(uu);
+            if(I) break;
+        }
+    }
+    // else The value itself is the instruction
+    return I;
+}
+/*___________________________________________________________________________
+ *
+ * @param User *U, a use of global variable
+ * @param Value *val, Value associated with Use *U
+ * @param bool *del, this is set to false if U is not an Instruction, else true 
+ * @return Instruction*, instruction just before U or val (or U itself)
+ *___________________________________________________________________________*/
+Instruction* getInstructionForValue(User *U, Value *val, bool *del) {
+    Instruction *I = dyn_cast<Instruction>(U);
+    if(!I) {
+        *del = false;
+        // The value was an operand in an instruction
+        // Hence getting the first user of value, which is the
+        // instruction before which we should decode 
+        for(User *uu: val->users()) {
+            I = dyn_cast<Instruction>(uu);
+            if(I) break;
+        }
+    } else {
+        // The value itself is the instruction
+        *del = true;
+    }
+    return I;
+}
+
 } /* namespace */
 
 void CaesarCipher::decode(GlobalVariable* globalVar, int stringLength, int offset) {
     for(User *U: globalVar->users()) {
         if(Value *val = dyn_cast<Value>(U)) {
-            Instruction *I = dyn_cast<Instruction>(U);
-            if(!I) {
-                // The value was an operand in an instruction
-                // Hence getting the first user of value, which is the
-                // instruction before which we should decode 
-                for(User *uu: val->users()) {
-                    I = dyn_cast<Instruction>(uu);
-                    if(I) break;
-                }
-            }
-            // else The value itself is the instruction
-
+            Instruction *I = getInstructionForValue(U, val);
             if(I) {
                 // Constant is used, hence decode it
                 // else skip decoding
@@ -310,24 +348,12 @@ void BitEncodingAndDecoding::decode(GlobalVariable* globalVar, GlobalVariable *n
     bool del;
     for(User *U: globalVar->users()) {
         if(Value *val = dyn_cast<Value>(U)) {
-            del = true;
-            Instruction *I = dyn_cast<Instruction>(U);
-            if(!I) {
-                del = false;
-                // The value was an operand in an instruction
-                // Hence getting the first user of value, which is the
-                // instruction before which we should decode 
-                for(User *uu: val->users()) {
-                    I = dyn_cast<Instruction>(uu);
-                    if(I) break;
-                }
-            }
-            // else The value itself is the instruction
-
+            Instruction *I = getInstructionForValue(U, val, &del);
             if(I) {
                 // Constant is used, hence decode it
                 // else skip decoding
-                inlineDecode(false, globalVar, stringLength, (8/nBits), val, I, nBits, populateBodyBitEncodingAndDecoding, newStringGlobalVar);
+                inlineDecode(false, globalVar, stringLength, (8/nBits), val, I, nBits, 
+                    populateBodyBitEncodingAndDecoding, newStringGlobalVar);
                 if(del) {
                     toErase.push_back(I);
                 }
