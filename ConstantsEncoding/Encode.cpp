@@ -5,7 +5,7 @@
 #include "llvm/Support/Debug.h"
 #include "ConstantsEncoding.h"
 using namespace llvm;
-#define DEBUG_TYPE "const-encoding"
+
 
 int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 
@@ -44,42 +44,83 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 	// Storing the value of string in str
 	std::string str = result->getAsCString();
 
-	// Encoding string by adding the random number in each character
+	// len = length of string
 	int len = str.length();
-	int n  = 2;
-	int step = 8/n;
+	// Number of bits which are obfuscated
+	int nBits  = 2;
+	/* 
+		step = Number of steps taken. 
+		Each character is of size 8 bits, which is splitted into sets of size nBits.
+		Therefore number of steps = Total number of bits/nBits = 8/nBits
+	*/
+	int step = 8/nBits;
+
+	/*
+		After obfuscation, the length of string is increased. 
+		Each character is split into sets of nBits and total number of such sets is equal to number of steps.
+		Therefore length of encoded string = length of original string * number of steps
+	*/
 	*stringLength = len*step;
-	char *s = new char[step*len+1];
-	s[step*len] = 0;
+
+	// Size of encoded string is equal to stringLength + 1 to store null character in the end
+	char *encodedStr = new char[step*len+1];
+	encodedStr[step*len] = 0;
+
+	// mask = 2^(nBits)-1
 	char mask = 1;
-    for(int i=1; i<n; i++) {
+    for(int i=1; i<nBits; i++) {
         mask = (mask<<1) + 1;
     }
-	char y = 0xff << n;
-	char p;
+  
+  	// y = maximum value of char left shifted by nBits
+	char y = 0xff << nBits;
+	char lastnBits;
+
+	// Iterating for each character in string
 	for(int i=0;i<len;i++){
 
+		// For each step, updating nBits in encoded string
 		for(int j=0;j<step;j++){
-			p = str[i] & mask;
+
+			// Gives the last n bits of original character
+			lastnBits = str[i] & mask;
+
+			// Current position in encoded string
 			int pos = i*step+j;
+
+			// Generates random number from 1 to 127
 			int randomNumber = rand() % 127 + 1;
 
-			s[pos] = (char)randomNumber;
-			char q = s[pos] & y;
-			char fv = p | q;
-			s[pos]= (fv==0)? y: fv; // if 0, put 11111100
-			str[i]=str[i]>>n;
+			// Storing random number in encoded character
+			encodedStr[pos] = (char)randomNumber;
+
+			// Gives first n bits of the generated random number
+			char firstnBits = encodedStr[pos] & y;
+
+			/* 
+				encoded character stores last n bits of original char 
+				and remaining (8-n) bits of the random number.
+			*/
+			char encodedChar = lastnBits | firstnBits;
+
+			// if 0, put 11111100
+			encodedStr[pos]= (encodedChar==0)? y: encodedChar; 
+
+			// Updating last two bits
+			str[i]=str[i]>>nBits;
 
 		}
 
 	}
 
+	// Creating a new global string which is the encoded string
     static LLVMContext& context = globalVar->getContext();
-	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(s)+1);
-	Constant *aString = ConstantDataArray::getString(context, s, true);
+	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(encodedStr)+1);
+	Constant *aString = ConstantDataArray::getString(context, encodedStr, true);
+
 	// giving new variable to decode
   	*newStringGlobalVar = new GlobalVariable(*M, Ty, true, GlobalValue::PrivateLinkage, aString);
   	(*newStringGlobalVar)->setAlignment(1);
 
-	return n;
+	return nBits;
 }
