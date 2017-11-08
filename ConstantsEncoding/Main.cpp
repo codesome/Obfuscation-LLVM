@@ -24,13 +24,16 @@ bool ConstantsEncoding::runOnModule(Module &M) {
 			// Caesar
 			if(rand()%2) {
 				int offset = CaesarCipher::encode(globalVar, &stringLength);
-				CaesarCipher::decode(globalVar, stringLength, offset);
+				if(offset != CaesarCipher::INVALID)
+					CaesarCipher::decode(globalVar, stringLength, offset);
 			} else {
 				// Bit encoding and decoding
 				GlobalVariable *newStringGlobalVar = nullptr;
 				int nBits = BitEncodingAndDecoding::encode(globalVar, &newStringGlobalVar, &stringLength, &M);
-				BitEncodingAndDecoding::decode(globalVar, newStringGlobalVar, stringLength, nBits);
-				globalVar->eraseFromParent();
+				if(nBits != BitEncodingAndDecoding::INVALID) {
+					BitEncodingAndDecoding::decode(globalVar, newStringGlobalVar, stringLength, nBits);
+					globalVar->eraseFromParent();
+				}
 			}
 
 		}

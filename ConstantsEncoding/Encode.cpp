@@ -13,8 +13,13 @@ int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 	Constant* constValue = globalVar->getInitializer();
 	// Type casting from constant to constant data array
 	ConstantDataArray* result = cast<ConstantDataArray>(constValue);
+	
+	if(!result->isCString())
+		return CaesarCipher::INVALID;
+
 	// Storing the value of string in str
 	std::string str = result->getAsCString();
+
 	// Getting random number
 	int randomNumber = rand() % 125 + 1;
 
@@ -41,6 +46,10 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 	Constant* constValue = globalVar->getInitializer();
 	// Type casting from constant to constant data array
 	ConstantDataArray* result = cast<ConstantDataArray>(constValue);
+
+	if(!result->isCString())
+		return BitEncodingAndDecoding::INVALID;
+	
 	// Storing the value of string in str
 	std::string str = result->getAsCString();
 

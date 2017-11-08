@@ -16,6 +16,10 @@ using namespace llvm;
 
 class CaesarCipher {
 public:
+
+    // Used to mark an invalid constant for encoding
+    static const int INVALID = -1;
+    
     /*___________________________________________________________________
      *
      * Encodes the global variable and replaces encoded
@@ -25,6 +29,7 @@ public:
      * @param GlobalVariabel* globalVar, variable to encode
      * @param int *stringLength, the string length will be stored in this
      * @return int, the offset used to obfuscate
+     *              CaesarCipher::INVALID if not encoded
      *___________________________________________________________________*/
     static int encode(GlobalVariable* globalVar, int *stringLength);
 
@@ -43,6 +48,9 @@ public:
 
 class BitEncodingAndDecoding {
 public:
+    
+    // Used to mark an invalid constant for encoding
+    static const int INVALID = -1;
     /*___________________________________________________________________
      *
      * Encodes the global variable and stores the encoded
@@ -55,6 +63,7 @@ public:
      * @param int *stringLength, the string length of encoded string 
      *                will be stored in this
      * @return int, number of bits encoded in each character
+     *              BitEncodingAndDecoding::INVALID if not encoded
      *___________________________________________________________________*/
     static int encode(GlobalVariable *globalVar, GlobalVariable **newStringGlobalVar, int *stringLength, Module *M);
     
