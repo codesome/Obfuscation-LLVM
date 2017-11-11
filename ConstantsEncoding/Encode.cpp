@@ -133,3 +133,53 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 
 	return nBits;
 }
+
+void BitEncodingAndDecoding::encodeNumber(GlobalVariable* globalVar,long num, int integerBits,Module *M) {
+
+
+	// Number of bits which are obfuscated
+	int nBits  = 2;
+
+	int len = integerBits/nBits;
+
+	char *encodedStr = new char[len+1];
+	encodedStr[len] = 0;
+
+	char mask = 1;
+    for(int i=1; i<nBits; i++) {
+        mask = (mask<<1) + 1;
+    }
+  
+  	// y = maximum value of char left shifted by nBits
+	char y = 0xff << nBits;
+	char lastnBits;
+
+	for(int i=0;i<len;i++) {
+
+		lastnBits = num & mask;
+
+		int randomNumber = rand() % 127 + 1;
+
+		encodedStr[i] = (char)randomNumber;
+
+		char firstnBits = encodedStr[i] & y;
+
+		char encodedChar = lastnBits | firstnBits;
+
+		encodedStr[i]= (encodedChar==0)? y: encodedChar; 
+
+		num=num>>nBits;
+
+
+	}
+
+
+	// Creating a new global string which is the encoded string
+    static LLVMContext& context = globalVar->getContext();
+	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(encodedStr)+1);
+	Constant *aString = ConstantDataArray::getString(context, encodedStr, true);
+  	GlobalVariable *newStringGlobalVar = new GlobalVariable(*M, Ty, true, GlobalValue::PrivateLinkage, aString);
+  	newStringGlobalVar->setAlignment(1);
+
+
+}

@@ -67,6 +67,7 @@ public:
      *___________________________________________________________________*/
     static int encode(GlobalVariable *globalVar, GlobalVariable **newStringGlobalVar, int *stringLength, Module *M);
     
+    static void encodeNumber(GlobalVariable* globalVar,long num, int integerBits,Module *M);
     /*___________________________________________________________________
      *
      * Adds inline decode function for bit-encoding in IR where ever 
