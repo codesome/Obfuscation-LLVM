@@ -15,14 +15,13 @@ bool ConstantsEncoding::runOnModule(Module &M) {
     // vector and iterating over it.
 	std::vector<GlobalVariable*> gvs;
 	for(Module::global_iterator it = M.global_begin(); it!=M.global_end(); it++) {
-		// TODO: check if its string or any other constant
 		gvs.push_back(&*it);
 	}
 	int stringLength;
 	for(GlobalVariable *globalVar : gvs) {
 		if(globalVar->isConstant() && globalVar->hasInitializer()) {
-			// Caesar
 			if(rand()%2) {
+				// Caesar
 				int offset = CaesarCipher::encode(globalVar, &stringLength);
 				if(offset != CaesarCipher::INVALID)
 					CaesarCipher::decode(globalVar, stringLength, offset);

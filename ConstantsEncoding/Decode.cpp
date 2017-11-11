@@ -17,11 +17,12 @@ namespace {
  * @param LLVMContext& context, as the name says
  * @param GlobalVariable *globalVar, the variable to be decoded
  * @param Value *iterAlloca, the register allocated as loop iterator
- * @param Value *newStrAlloca, new string allocated for decoded result
+ * @param Value *newAlloca, allocated for decoded result
  * @param int offset, offset used while encoding
+ * @param int unused, this is an unused parameter
  *___________________________________________________________________*/
 void populateBodyCaesar(IRBuilder<>* loopBodyBuilder, LLVMContext& context, 
-    GlobalVariable *globalVar, Value *iterAlloca, Value *newStrAlloca, int offset) {
+    GlobalVariable *globalVar, Value *iterAlloca, Value *newAlloca, int offset, int unused) {
 
     // Values needed
     Type* i8 = Type::getInt8Ty(context);
@@ -39,7 +40,7 @@ void populateBodyCaesar(IRBuilder<>* loopBodyBuilder, LLVMContext& context,
     // character from global variable
     Value *globalVarGEP = loopBodyBuilder->CreateInBoundsGEP(globalVar, idxListBody);
     // character from new string
-    Value *newStrGEP = loopBodyBuilder->CreateInBoundsGEP(newStrAlloca, idxListBody);
+    Value *newStrGEP = loopBodyBuilder->CreateInBoundsGEP(newAlloca, idxListBody);
     
     // ascii value of global variable character
     Value *ascii = loopBodyBuilder->CreateLoad(globalVarGEP);
@@ -66,11 +67,12 @@ void populateBodyCaesar(IRBuilder<>* loopBodyBuilder, LLVMContext& context,
  * @param LLVMContext& context, as the name says
  * @param GlobalVariable *globalVar, the variable to be decoded
  * @param Value *iterAlloca, the register allocated as loop iterator
- * @param Value *newStrAlloca, new string allocated for decoded result
+ * @param Value *newAlloca, allocated for decoded result
  * @param int nBits, number of bits encoded in each character
+ * @param int unused, this is an unused parameter
  *___________________________________________________________________*/
 void populateBodyBitEncodingAndDecoding(IRBuilder<>* loopBodyBuilder, LLVMContext& context, 
-    GlobalVariable *globalVar, Value *iterAlloca, Value *newStrAlloca, int nBits) {
+    GlobalVariable *globalVar, Value *iterAlloca, Value *newAlloca, int nBits, int unused) {
 
     // Values needed
     int nChar = 8/nBits;
@@ -96,7 +98,7 @@ void populateBodyBitEncodingAndDecoding(IRBuilder<>* loopBodyBuilder, LLVMContex
     idxVector.push_back(newStringIndex);
     ArrayRef<Value*> idxListBody(idxVector);
     // character from new string
-    Value *newStrGEP = loopBodyBuilder->CreateInBoundsGEP(newStrAlloca, idxListBody);
+    Value *newStrGEP = loopBodyBuilder->CreateInBoundsGEP(newAlloca, idxListBody);
     loopBodyBuilder->CreateStore(zeroi8, newStrGEP);
     Value *newStrLoad = loopBodyBuilder->CreateLoad(newStrGEP);
 
@@ -117,6 +119,53 @@ void populateBodyBitEncodingAndDecoding(IRBuilder<>* loopBodyBuilder, LLVMContex
 
     loopBodyBuilder->CreateStore(newStrLoad, newStrGEP);
 
+}
+
+/*___________________________________________________________________
+ *
+ * Bit encoding and decoding
+ * Populates the body of loop used in decode.
+ *
+ * @param IRBuilder<>* loopBodyBuilder, the builder of the body
+ * @param LLVMContext& context, as the name says
+ * @param GlobalVariable *globalVar, the variable to be decoded
+ * @param Value *iterAlloca, the register allocated as loop iterator
+ * @param Value *newAlloca, allocated for decoded result
+ * @param int nBits, number of bits encoded in each character
+ * @param int integerBits, number of bits in the original integer
+ *___________________________________________________________________*/
+void populateBodyBitEncodingAndDecodingNumbers(IRBuilder<>* loopBodyBuilder, LLVMContext& context, 
+    GlobalVariable *globalVar, Value *iterAlloca, Value *newAlloca, int nBits, int integerBits) {
+
+    // Values needed
+    Type* iN = Type::getIntNTy(context, integerBits);
+    Type* i32 = Type::getInt32Ty(context);
+    Value* zero = ConstantInt::get(i32, 0);
+
+    int mask = 1;
+    for(int i=1; i<nBits; i++) {
+        mask = (mask<<1) + 1;
+    }
+    Value* maskVal = ConstantInt::get(iN, mask);
+
+    // getting character at index=iterator
+    Value *iterLoad = loopBodyBuilder->CreateLoad(iterAlloca);
+
+    std::vector<Value*> idxVector;
+    idxVector.push_back(zero);
+    idxVector.push_back(iterLoad);
+    ArrayRef<Value*> idxListBody(idxVector);
+
+    Value *globalVarGEP = loopBodyBuilder->CreateInBoundsGEP(globalVar, idxListBody);
+    Value *globalVarLoad = loopBodyBuilder->CreateLoad(globalVarGEP);
+    Value *newAllocaLoad = loopBodyBuilder->CreateLoad(newAlloca);
+
+    Value *orVal = loopBodyBuilder->CreateAnd(globalVarLoad, maskVal);
+    Value *mul = loopBodyBuilder->CreateMul(iterLoad, ConstantInt::get(iN, nBits));
+    Value *shift = loopBodyBuilder->CreateShl(orVal, mul);
+    Value *newAllocaAdd = loopBodyBuilder->CreateAdd(newAllocaLoad, shift);
+    loopBodyBuilder->CreateStore(newAllocaAdd, newAlloca);
+    
 }
 
 /*___________________________________________________________________
@@ -142,43 +191,48 @@ Value* populateLatch(IRBuilder<>* loopLatchBuilder, Value *iterAlloca, Value *lo
  *
  * Add null character at the end of decoded string
  *
+ * @param bool isNumber, true if decoded result is a number, 
+ *                       false if string
  * @param IRBuilder<>* loopEndBuilder, the builder for loop end
  * @param GlobalVariable *globalVar, the variable to be decoded
- * @param Value *newStrAlloca, new string allocated for decoded result
+ * @param Value *newAlloca, allocated for decoded result
  * @param Value *zero, Value* for 0
  * @param Value *loopBound, Value* for string length 
  * @param Value *newStrEnd, last index for decoded string 
  * NOTE: type of loopBound and zero should be same
- * @return Value*, the decoded string (after getelementptr)
+ * @return Value*, the decoded string/number (i8* or iN)
  *___________________________________________________________________*/
-Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar, 
-    Value *newStrAlloca, Value *zero, Value *loopBound, Value *newStrEnd) {
-    
-    // copying last character from string, usually null
-    // this should not be decoded
-    std::vector<Value*> idxVector;
-    idxVector.push_back(zero);
-    idxVector.push_back(loopBound);
-    ArrayRef<Value*> idxListEndGlobal(idxVector);
-    // Encoded string last character
-    Value *globalVarGEP = loopEndBuilder->CreateInBoundsGEP(globalVar, idxListEndGlobal);
-    Value *ascii = loopEndBuilder->CreateLoad(globalVarGEP);
+Value* populateEnd(bool isNumber, IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar, 
+    Value *newAlloca, Value *zero, Value *loopBound, Value *newStrEnd) {
+    if(isNumber) {
+        return loopEndBuilder->CreateLoad(newAlloca);
+    } else {
+        // copying last character from string, usually null
+        // this should not be decoded
+        std::vector<Value*> idxVector;
+        idxVector.push_back(zero);
+        idxVector.push_back(loopBound);
+        ArrayRef<Value*> idxListEndGlobal(idxVector);
+        // Encoded string last character
+        Value *globalVarGEP = loopEndBuilder->CreateInBoundsGEP(globalVar, idxListEndGlobal);
+        Value *ascii = loopEndBuilder->CreateLoad(globalVarGEP);
 
-    idxVector.clear();
-    idxVector.push_back(zero);
-    idxVector.push_back(newStrEnd);
-    ArrayRef<Value*> idxListEndNewStr(idxVector);
-    // new string last character
-    Value *newStrGEP = loopEndBuilder->CreateInBoundsGEP(newStrAlloca, idxListEndNewStr);
-    
-    loopEndBuilder->CreateStore(ascii, newStrGEP);
-    
-    // getting the string from the allocated variable
-    idxVector.clear();
-    idxVector.push_back(zero);
-    idxVector.push_back(zero);
-    ArrayRef<Value*> idxListEnd2(idxVector);
-    return loopEndBuilder->CreateInBoundsGEP(newStrAlloca, idxListEnd2);
+        idxVector.clear();
+        idxVector.push_back(zero);
+        idxVector.push_back(newStrEnd);
+        ArrayRef<Value*> idxListEndNewStr(idxVector);
+        // new string last character
+        Value *newStrGEP = loopEndBuilder->CreateInBoundsGEP(newAlloca, idxListEndNewStr);
+        
+        loopEndBuilder->CreateStore(ascii, newStrGEP);
+        
+        // getting the string from the allocated variable
+        idxVector.clear();
+        idxVector.push_back(zero);
+        idxVector.push_back(zero);
+        ArrayRef<Value*> idxListEnd2(idxVector);
+        return loopEndBuilder->CreateInBoundsGEP(newAlloca, idxListEnd2);
+    }
 }
 
 /*___________________________________________________________________________
@@ -200,8 +254,10 @@ Value* populateEnd(IRBuilder<>* loopEndBuilder, GlobalVariable *globalVar,
  *        if this is given, it is considered as encoded variable
  *        and globalVar will be deleted from IR
  *___________________________________________________________________________*/
-void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, int loopIterStep, Value *originalValue, Instruction *I, int param,
-    void (*populateBody)(IRBuilder<>*,LLVMContext&,GlobalVariable*,Value*,Value*,int), GlobalVariable *newStringVar=nullptr) {
+void inlineDecode(bool isCaesar, bool isNumber, GlobalVariable *globalVar, int loopBoundInt, 
+    int loopIterStep, Value *originalValue, Instruction *I, int param,
+    void (*populateBody)(IRBuilder<>*,LLVMContext&,GlobalVariable*,Value*,Value*,int,int), 
+    GlobalVariable *newStringVar=nullptr, int integerBits=0) {
 
     GlobalVariable *encodedGlobalVar = newStringVar==nullptr? globalVar: newStringVar;
 
@@ -233,12 +289,14 @@ void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, in
     // HEADER
     IRBuilder<> loopHeaderBuilder(loopHeader);
     // allocating new string for the decode result
-    Value *newStrAlloca;
-    if(isCaesar) {
+    Value *newAlloca;
+    if(isNumber) {
+        newAlloca = loopHeaderBuilder.CreateAlloca(Type::getIntNTy(context, integerBits));
+    } else if(isCaesar) {
         PointerType *pType = encodedGlobalVar->getType();
-        newStrAlloca = loopHeaderBuilder.CreateAlloca(pType->getElementType());
+        newAlloca = loopHeaderBuilder.CreateAlloca(pType->getElementType());
     } else {
-        newStrAlloca = loopHeaderBuilder.CreateAlloca(ArrayType::get(Type::getInt8Ty(context), (loopBoundInt/loopIterStep)+1));
+        newAlloca = loopHeaderBuilder.CreateAlloca(ArrayType::get(Type::getInt8Ty(context), (loopBoundInt/loopIterStep)+1));
     }
     // loop iterator, goes from 0 to stringLength-1, with steps of loopIterStep
     Value *iterAlloca = loopHeaderBuilder.CreateAlloca(i32);
@@ -247,7 +305,7 @@ void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, in
 
     // BODY
     IRBuilder<> loopBodyBuilder(loopBody);
-    populateBody(&loopBodyBuilder, context, (newStringVar? newStringVar: encodedGlobalVar), iterAlloca, newStrAlloca, param);
+    populateBody(&loopBodyBuilder, context, encodedGlobalVar, iterAlloca, newAlloca, param, integerBits);
     loopBodyBuilder.CreateBr(loopLatch);
 
     // LATCH
@@ -259,9 +317,10 @@ void inlineDecode(bool isCaesar, GlobalVariable *globalVar, int loopBoundInt, in
     IRBuilder<> loopEndBuilder(loopEnd);
     Value *newStrGEP;
     if(isCaesar) {
-        newStrGEP = populateEnd(&loopEndBuilder, encodedGlobalVar, newStrAlloca, zero, loopBound, loopBound);
+        newStrGEP = populateEnd(isNumber, &loopEndBuilder, encodedGlobalVar, newAlloca, zero, loopBound, loopBound);
     } else {
-        newStrGEP = populateEnd(&loopEndBuilder, encodedGlobalVar, newStrAlloca, zero, loopBound, ConstantInt::get(i32, loopBoundInt/loopIterStep));
+        newStrGEP = populateEnd(isNumber, &loopEndBuilder, encodedGlobalVar, newAlloca, 
+            zero, loopBound, ConstantInt::get(i32, loopBoundInt/loopIterStep));
     }
 
     // Moving instruction from I till end in the original block to 
@@ -303,6 +362,7 @@ Instruction* getInstructionForValue(User *U, Value *val) {
     // else The value itself is the instruction
     return I;
 }
+
 /*___________________________________________________________________________
  *
  * @param User *U, a use of global variable
@@ -337,7 +397,7 @@ void CaesarCipher::decode(GlobalVariable* globalVar, int stringLength, int offse
             if(I) {
                 // Constant is used, hence decode it
                 // else skip decoding
-                inlineDecode(true, globalVar, stringLength, 1, val, I, offset, populateBodyCaesar);
+                inlineDecode(true, false, globalVar, stringLength, 1, val, I, offset, populateBodyCaesar);
             }
         }
     }
@@ -352,7 +412,7 @@ void BitEncodingAndDecoding::decode(GlobalVariable* globalVar, GlobalVariable *n
             if(I) {
                 // Constant is used, hence decode it
                 // else skip decoding
-                inlineDecode(false, globalVar, stringLength, (8/nBits), val, I, nBits, 
+                inlineDecode(false, false, globalVar, stringLength, (8/nBits), val, I, nBits, 
                     populateBodyBitEncodingAndDecoding, newStringGlobalVar);
                 if(del) {
                     toErase.push_back(I);
@@ -363,4 +423,9 @@ void BitEncodingAndDecoding::decode(GlobalVariable* globalVar, GlobalVariable *n
     for(Instruction *I : toErase) {
         I->eraseFromParent();
     }
+}
+
+void BitEncodingAndDecoding::decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int integerBits, int nBits) {
+    inlineDecode(false, true, globalVar, (integerBits/nBits), 1, val, I, nBits, 
+                    populateBodyBitEncodingAndDecodingNumbers, nullptr, integerBits);
 }

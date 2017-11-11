@@ -79,6 +79,8 @@ public:
      * @param int nBits, number of bits encoded in each character
      *___________________________________________________________________*/
     static void decode(GlobalVariable *globalVar, GlobalVariable *newStringGlobalVar, int stringLength, int nBits);
+
+    static void decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int integerBits, int nBits);
 };
 
 class ConstantsEncoding : public ModulePass {
