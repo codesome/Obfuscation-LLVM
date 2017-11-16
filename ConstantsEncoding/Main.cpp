@@ -10,6 +10,18 @@ using namespace llvm;
 #define DEBUG_TYPE "const-encoding"
 
 bool ConstantsEncoding::runOnModule(Module &M) {
+	// iterating through all operands in all instructions to 
+	// encode and decode integers
+	ConstantInt *CI;
+	std::vector<Instruction*> insToItertate;
+	for (Function &F : M) {
+		for(BasicBlock &BB: F) {
+			for(Instruction &I: BB) {
+				insToItertate.push_back(&I);
+			}
+		}
+	}
+	
     // For bit encoding and decoding new global variable will be 
     // created. Hence string the original global variables in a 
     // vector and iterating over it.
@@ -35,6 +47,22 @@ bool ConstantsEncoding::runOnModule(Module &M) {
 				}
 			}
 
+		}
+	}
+
+
+	for(Instruction *I: insToItertate) {
+		if(I->getType()->isIntegerTy()) {
+			int numOperands = I->getNumOperands();
+			for (int i=0; i < numOperands; i++) {
+				if((CI=dyn_cast<ConstantInt>(I->getOperand(i)))!=nullptr) {
+					GlobalVariable *globalVar;
+					int integerBits = CI->getType()->getIntegerBitWidth();
+					long val = CI->getSExtValue();
+					int nBits = BitEncodingAndDecoding::encodeNumber(&globalVar, val, integerBits, &M);
+					BitEncodingAndDecoding::decodeNumber(globalVar, CI, I, integerBits, nBits, M.getContext());
+				}
+			}
 		}
 	}
 

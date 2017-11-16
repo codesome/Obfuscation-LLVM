@@ -134,14 +134,13 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 	return nBits;
 }
 
-void BitEncodingAndDecoding::encodeNumber(GlobalVariable* globalVar,long num, int integerBits,Module *M) {
+int BitEncodingAndDecoding::encodeNumber(GlobalVariable **globalVar, long num, int integerBits, Module *M) {
 
 
 	// Number of bits which are obfuscated
-	int nBits  = 2;
+	int nBits  = 4;
 
 	int len = integerBits/nBits;
-
 	char *encodedStr = new char[len+1];
 	encodedStr[len] = 0;
 
@@ -155,8 +154,7 @@ void BitEncodingAndDecoding::encodeNumber(GlobalVariable* globalVar,long num, in
 	char lastnBits;
 
 	for(int i=0;i<len;i++) {
-
-		lastnBits = num & mask;
+		lastnBits = char(num) & mask;
 
 		int randomNumber = rand() % 127 + 1;
 
@@ -170,16 +168,16 @@ void BitEncodingAndDecoding::encodeNumber(GlobalVariable* globalVar,long num, in
 
 		num=num>>nBits;
 
-
 	}
 
 
 	// Creating a new global string which is the encoded string
-    static LLVMContext& context = globalVar->getContext();
+    static LLVMContext& context = M->getContext();
 	ArrayType *Ty = ArrayType::get(Type::getInt8Ty(context),strlen(encodedStr)+1);
 	Constant *aString = ConstantDataArray::getString(context, encodedStr, true);
-  	GlobalVariable *newStringGlobalVar = new GlobalVariable(*M, Ty, true, GlobalValue::PrivateLinkage, aString);
-  	newStringGlobalVar->setAlignment(1);
+  	*globalVar = new GlobalVariable(*M, Ty, true, GlobalValue::PrivateLinkage, aString);
+  	(*globalVar)->setAlignment(1);
 
+  	return nBits;
 
 }

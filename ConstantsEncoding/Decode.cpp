@@ -146,21 +146,27 @@ void populateBodyBitEncodingAndDecodingNumbers(IRBuilder<>* loopBodyBuilder, LLV
     for(int i=1; i<nBits; i++) {
         mask = (mask<<1) + 1;
     }
-    Value* maskVal = ConstantInt::get(iN, mask);
+    Value* maskVal = ConstantInt::get(Type::getInt8Ty(context), mask);
 
     // getting character at index=iterator
     Value *iterLoad = loopBodyBuilder->CreateLoad(iterAlloca);
+    if(iterLoad->getType()->getIntegerBitWidth() != (unsigned int)integerBits) {
+        iterLoad = loopBodyBuilder->CreateSExtOrTrunc(iterLoad, iN);
+    }
 
     std::vector<Value*> idxVector;
     idxVector.push_back(zero);
     idxVector.push_back(iterLoad);
     ArrayRef<Value*> idxListBody(idxVector);
-
     Value *globalVarGEP = loopBodyBuilder->CreateInBoundsGEP(globalVar, idxListBody);
     Value *globalVarLoad = loopBodyBuilder->CreateLoad(globalVarGEP);
     Value *newAllocaLoad = loopBodyBuilder->CreateLoad(newAlloca);
 
-    Value *orVal = loopBodyBuilder->CreateAnd(globalVarLoad, maskVal);
+    Value *orVal = loopBodyBuilder->CreateAnd(globalVarLoad, maskVal);    
+    if(orVal->getType()->getIntegerBitWidth() != (unsigned int)integerBits) {
+        orVal = loopBodyBuilder->CreateSExtOrTrunc(orVal, iN);
+    }
+
     Value *mul = loopBodyBuilder->CreateMul(iterLoad, ConstantInt::get(iN, nBits));
     Value *shift = loopBodyBuilder->CreateShl(orVal, mul);
     Value *newAllocaAdd = loopBodyBuilder->CreateAdd(newAllocaLoad, shift);
@@ -257,13 +263,13 @@ Value* populateEnd(bool isNumber, IRBuilder<>* loopEndBuilder, GlobalVariable *g
 void inlineDecode(bool isCaesar, bool isNumber, GlobalVariable *globalVar, int loopBoundInt, 
     int loopIterStep, Value *originalValue, Instruction *I, int param,
     void (*populateBody)(IRBuilder<>*,LLVMContext&,GlobalVariable*,Value*,Value*,int,int), 
-    GlobalVariable *newStringVar=nullptr, int integerBits=0) {
+    GlobalVariable *newStringVar=nullptr, int integerBits=0, LLVMContext *ctx=nullptr) {
 
     GlobalVariable *encodedGlobalVar = newStringVar==nullptr? globalVar: newStringVar;
 
-    static LLVMContext& context = globalVar->getContext();
+    static LLVMContext& context = ctx==nullptr? globalVar->getContext() : *ctx;
     // Values required later
-    Type* i32 = Type::getInt32Ty(context);
+    Type *i32 = Type::getInt32Ty(context);
     Value* zero = ConstantInt::get(i32, 0);
     Value* iterStep = ConstantInt::get(i32, loopIterStep);
     Value* loopBound = ConstantInt::get(i32, loopBoundInt);
@@ -425,7 +431,8 @@ void BitEncodingAndDecoding::decode(GlobalVariable* globalVar, GlobalVariable *n
     }
 }
 
-void BitEncodingAndDecoding::decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int integerBits, int nBits) {
-    inlineDecode(false, true, globalVar, (integerBits/nBits), 1, val, I, nBits, 
-                    populateBodyBitEncodingAndDecodingNumbers, nullptr, integerBits);
+void BitEncodingAndDecoding::decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, 
+    int integerBits, int nBits, LLVMContext& context) {
+    inlineDecode(false, true, globalVar, (integerBits/nBits), 1, val, I, nBits,
+                    populateBodyBitEncodingAndDecodingNumbers, nullptr, integerBits, &context);
 }

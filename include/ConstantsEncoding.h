@@ -67,7 +67,7 @@ public:
      *___________________________________________________________________*/
     static int encode(GlobalVariable *globalVar, GlobalVariable **newStringGlobalVar, int *stringLength, Module *M);
     
-    static void encodeNumber(GlobalVariable* globalVar,long num, int integerBits,Module *M);
+    static int encodeNumber(GlobalVariable **globalVar, long num, int integerBits, Module *M);
     /*___________________________________________________________________
      *
      * Adds inline decode function for bit-encoding in IR where ever 
@@ -81,7 +81,7 @@ public:
      *___________________________________________________________________*/
     static void decode(GlobalVariable *globalVar, GlobalVariable *newStringGlobalVar, int stringLength, int nBits);
 
-    static void decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int integerBits, int nBits);
+    static void decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int integerBits, int nBits, LLVMContext& ctx);
 };
 
 class ConstantsEncoding : public ModulePass {
