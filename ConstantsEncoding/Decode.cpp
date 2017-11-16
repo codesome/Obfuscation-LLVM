@@ -363,8 +363,8 @@ Instruction* getInstructionForValue(User *U, Value *val) {
         // Hence getting the first user of value, which is the
         // instruction before which we should decode 
         for(User *uu: val->users()) {
+            // users are in reverse, hence last in the iteration
             I = dyn_cast<Instruction>(uu);
-            if(I) break;
         }
     }
     // else The value itself is the instruction
@@ -386,8 +386,8 @@ Instruction* getInstructionForValue(User *U, Value *val, bool *del) {
         // Hence getting the first user of value, which is the
         // instruction before which we should decode 
         for(User *uu: val->users()) {
+            // users are in reverse, hence last in the iteration
             I = dyn_cast<Instruction>(uu);
-            if(I) break;
         }
     } else {
         // The value itself is the instruction

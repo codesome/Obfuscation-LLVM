@@ -69,7 +69,6 @@ bool ConstantsEncoding::runOnModule(Module &M) {
 	}
 
 
-	M.dump();
     return true;
 }
 
