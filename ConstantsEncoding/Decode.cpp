@@ -150,9 +150,6 @@ void populateBodyBitEncodingAndDecodingNumbers(IRBuilder<>* loopBodyBuilder, LLV
 
     // getting character at index=iterator
     Value *iterLoad = loopBodyBuilder->CreateLoad(iterAlloca);
-    if(iterLoad->getType()->getIntegerBitWidth() != (unsigned int)integerBits) {
-        iterLoad = loopBodyBuilder->CreateSExtOrTrunc(iterLoad, iN);
-    }
 
     std::vector<Value*> idxVector;
     idxVector.push_back(zero);
@@ -165,6 +162,9 @@ void populateBodyBitEncodingAndDecodingNumbers(IRBuilder<>* loopBodyBuilder, LLV
     Value *orVal = loopBodyBuilder->CreateAnd(globalVarLoad, maskVal);    
     if(orVal->getType()->getIntegerBitWidth() != (unsigned int)integerBits) {
         orVal = loopBodyBuilder->CreateSExtOrTrunc(orVal, iN);
+    }
+    if(iterLoad->getType()->getIntegerBitWidth() != (unsigned int)integerBits) {
+        iterLoad = loopBodyBuilder->CreateSExtOrTrunc(iterLoad, iN);
     }
 
     Value *mul = loopBodyBuilder->CreateMul(iterLoad, ConstantInt::get(iN, nBits));
@@ -297,7 +297,9 @@ void inlineDecode(bool isCaesar, bool isNumber, GlobalVariable *globalVar, int l
     // allocating new string for the decode result
     Value *newAlloca;
     if(isNumber) {
-        newAlloca = loopHeaderBuilder.CreateAlloca(Type::getIntNTy(context, integerBits));
+        Type *iN = Type::getIntNTy(context, integerBits);
+        newAlloca = loopHeaderBuilder.CreateAlloca(iN);
+        loopHeaderBuilder.CreateStore(ConstantInt::get(iN, 0), newAlloca);
     } else if(isCaesar) {
         PointerType *pType = encodedGlobalVar->getType();
         newAlloca = loopHeaderBuilder.CreateAlloca(pType->getElementType());
