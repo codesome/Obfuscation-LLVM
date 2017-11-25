@@ -31,6 +31,8 @@ struct LoopSplitInfo {
 
 class IndirectAccessUtils {
 public:
+    static const unsigned int MAX_BITS = 64;
+
     /*_______________________________________________________________________
      *
      * Used to check for legality of indirect access of iterator
@@ -96,8 +98,8 @@ public:
 
     /*______________________________________________________________________
      *
-     * Gives the iterator (induction variable) from the loop body
-     * NOTE: It is assumed that loop is single dimentional
+     * Gives the first integer induction variable from the loop body
+     * (integer with <= MAX_BITS)
      * 
      * @param Loop *L, loop whose induction variable is required
      * @param ScalarEvolution *SE, from analysis pass
@@ -105,7 +107,7 @@ public:
      * @return Value*, the loop iterator
      * NOTE: It returns nullptr if iterator was not found
      *______________________________________________________________________*/
-    static Value* getIterator(Loop *L, ScalarEvolution *SE);
+    static Value* getIntegerIterator(Loop *L, ScalarEvolution *SE);
 
 };
 

@@ -124,7 +124,8 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     IRBuilder<> bodyBuilder(LSI->clonedLoop->getLoopPreheader()
         ->getUniqueSuccessor()->getTerminator());
     // iter
-    Value *iterLoad = getIterator(LSI->clonedLoop, SE);
+    Value *iterLoad = getIntegerIterator(LSI->clonedLoop, SE);
+    
     // cnt
     Value *countLoadBody = bodyBuilder.CreateLoad(cnt);
     
@@ -137,6 +138,11 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     Value *arrayIdx = bodyBuilder.CreateGEP(indirectAccessArray, idxList);
 
     // array[cnt] = iter
+    unsigned int iBits = iterLoad->getType()->getPrimitiveSizeInBits();
+    if(iBits != IndirectAccessUtils::MAX_BITS) {
+        Type* iMAX = Type::getIntNTy(F->getContext(), IndirectAccessUtils::MAX_BITS);
+        iterLoad = bodyBuilder.CreateZExt(iterLoad, iMAX);
+    }
     bodyBuilder.CreateStore(iterLoad, arrayIdx);
 
     // cnt++ in loop latch
@@ -184,13 +190,15 @@ void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
 
 }
 
-Value* IndirectAccessUtils::getIterator(Loop *L, ScalarEvolution *SE) {
+Value* IndirectAccessUtils::getIntegerIterator(Loop *L, ScalarEvolution *SE) {
     // Getting the first induction phi
     BasicBlock *preHeader = L->getLoopPreheader();
     for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
         InductionDescriptor ID;
         if(InductionDescriptor::isInductionPHI(&phi, L, SE, ID)) {
-            return dyn_cast<Value>(&phi);
+            Type *ty = phi.getType();
+            if(ty->isIntegerTy() && ty->getPrimitiveSizeInBits() <= IndirectAccessUtils::MAX_BITS)
+                return dyn_cast<Value>(&phi);
         }
     }
     return nullptr;
@@ -201,8 +209,8 @@ Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
     IRBuilder<> builder(entryBlock.getTerminator());
 
     // Initialising array in loop pre header for indirect access
-    Type* i32 = Type::getInt32Ty(F->getContext());
-    AllocaInst* indirectAccessArray = builder.CreateAlloca(ArrayType::get(i32, size));
+    Type* iMAX = Type::getIntNTy(F->getContext(), IndirectAccessUtils::MAX_BITS);
+    AllocaInst* indirectAccessArray = builder.CreateAlloca(ArrayType::get(iMAX, size));
     // indirectAccessArray->setAlignment(16);
     return indirectAccessArray;
 }

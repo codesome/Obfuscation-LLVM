@@ -8,7 +8,7 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
 	if(LSI->clonedLoop==nullptr)
 		return;
     
-    Value *iterator = getIterator(LSI->originalLoop, SE);
+    Value *iterator = getIntegerIterator(LSI->originalLoop, SE);
     // L is the cloned loop where indirect access is to be done.
     Loop* L = LSI->originalLoop;
     Value* tripcount = LSI->tripCountValue;  // Loop trip count
