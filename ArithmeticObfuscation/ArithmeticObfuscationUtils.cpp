@@ -19,6 +19,7 @@ void ArithmeticObfuscationUtils::floatObfuscator(
     Type* i64 = Type::getInt64Ty(context);
 
     Constant* maxAllowedValueConst = ConstantFP::get(floatType, maxAllowedValue);
+    Constant* leastAllowedValueConst = ConstantFP::get(floatType, -maxAllowedValue);
     
     // from this instructions onwards, all the instructions 
     // till break will be be moved to if.end block
@@ -36,9 +37,13 @@ void ArithmeticObfuscationUtils::floatObfuscator(
     // then obfuscate, a+b can never overflow i64
     // else no, because a+b can overflow i64
     IRBuilder<> conditionBuilder(I);
-    Value* aCond = conditionBuilder.CreateFCmpOLT(a, maxAllowedValueConst);
-    Value* bCond = conditionBuilder.CreateFCmpOLT(b, maxAllowedValueConst);
-    Value* ifcond = conditionBuilder.CreateAnd(aCond, bCond);
+    Value* aCond1 = conditionBuilder.CreateFCmpOLT(a, maxAllowedValueConst);
+    Value* aCond2 = conditionBuilder.CreateFCmpOGT(a, leastAllowedValueConst);
+    Value* bCond1 = conditionBuilder.CreateFCmpOLT(b, maxAllowedValueConst);
+    Value* bCond2 = conditionBuilder.CreateFCmpOGT(b, leastAllowedValueConst);
+    Value* ifcond1 = conditionBuilder.CreateAnd(aCond1, aCond2);
+    Value* ifcond2 = conditionBuilder.CreateAnd(bCond1, bCond2);
+    Value* ifcond = conditionBuilder.CreateAnd(ifcond1, ifcond2);
     Value* result = conditionBuilder.CreateAlloca(floatType);
     conditionBuilder.CreateCondBr(ifcond, ifThenBB, ifElseBB);
 
