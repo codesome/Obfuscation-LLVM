@@ -145,6 +145,9 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     }
     bodyBuilder.CreateStore(iterLoad, arrayIdx);
 
+    // Type* m = Type::getIntNTy(F->getContext(), iBits);
+    // auto *Trunc = bodyBuilder.CreateTrunc(iterLoad, m);
+
     // cnt++ in loop latch
     Value* one = ConstantInt::get(i32, 1);
     IRBuilder<> latchBuilder(LSI->clonedLoop->getLoopLatch()->getTerminator());

@@ -42,9 +42,17 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     ArrayRef<Value*> idxList(idxVector);
     Value *arrayIdx = Builder.CreateGEP(array, idxList);
     Value *indirectAccess = Builder.CreateLoad(arrayIdx);
-
+    
     //Replacing all the uses of previous iterator with new one
     iterator->replaceAllUsesWith(indirectAccess);
+
+    unsigned int iBits = iterator->getType()->getPrimitiveSizeInBits();
+    if(iBits != IndirectAccessUtils::MAX_BITS) {
+
+        Type* iOriginal = Type::getIntNTy(F->getContext(), iBits);
+        iterator = Builder.CreateTrunc(iterator, iOriginal);
+    }
+    Builder.CreateStore(iterator,arrayIdx);
 
     // Changing compare operand
     Value *tripcnt = latchBuilder.CreateLoad(tripcount);
