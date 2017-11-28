@@ -3,6 +3,8 @@
 using namespace llvm;
 
 bool IndirectAccessUtils::isLegalTransform(Loop *L, ScalarEvolution *SE) {
-	return SE->getSmallConstantTripCount(L)>0 
-		&& IndirectAccessUtils::getIntegerIterator(L,SE)!=nullptr;
+	Value *iterator = IndirectAccessUtils::getIntegerIterator(L,SE);
+	return SE->getSmallConstantTripCount(L) > 0
+		&& iterator!=nullptr 
+		&& iterator->->getType()->getPrimitiveSizeInBits() <= IndirectAccessUtils::MAX_BITS;
 }
