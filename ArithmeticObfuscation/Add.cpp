@@ -33,7 +33,8 @@ bool obfuscateInteger(Instruction *I) {
     return true;
 }
 
-Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
+Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, 
+    Value* aXX, Value* bXX, Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat) {
 
     // pInt = aXX + bXX
     Value *pInt = ifThenBuilder->CreateAdd(aXX, bXX);
@@ -46,14 +47,11 @@ Value* ifThenCaller(IRBuilder<>* ifThenBuilder, Type* floatType, Value* aXX, Val
 }
 
 Value* ifElseCaller(IRBuilder<>* ifElseBuilder, Value* a, Value* b){
-
     // a + b
     return ifElseBuilder->CreateFAdd(a,b);
-
 }
 
 bool obfuscateFloat(Instruction *I) {
-
     ArithmeticObfuscationUtils::floatObfuscator(I, 4611686018427387903.0, ifThenCaller, ifElseCaller);
     return true;
 }

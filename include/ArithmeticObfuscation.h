@@ -41,14 +41,8 @@ public:
     static bool obfuscate(Instruction *I);
 };
 
-/* Implemented in ArithmeticObfuscation/UDiv.cpp */
-class UDivObfuscator {
-public:
-    static bool obfuscate(Instruction *I);
-};
-
-/* Implemented in ArithmeticObfuscation/SDiv.cpp */
-class SDivObfuscator {
+/* Implemented in ArithmeticObfuscation/Div.cpp */
+class DivObfuscator {
 public:
     static bool obfuscate(Instruction *I);
 };

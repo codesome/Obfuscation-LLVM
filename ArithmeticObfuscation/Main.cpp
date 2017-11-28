@@ -18,9 +18,8 @@ bool ArithmeticObfuscation::obfuscate(Instruction *I) {
         case (Instruction::Sub):
             return SubObfuscator::obfuscate(I);
         case (Instruction::SDiv):
-            return SDivObfuscator::obfuscate(I);
         case (Instruction::UDiv):
-            return UDivObfuscator::obfuscate(I);
+            return DivObfuscator::obfuscate(I);
         case (Instruction::Mul):
             return MulObfuscator::obfuscate(I);
         default:
@@ -37,9 +36,8 @@ bool ArithmeticObfuscation::obfuscateWithFloat(Instruction *I) {
         case (Instruction::FSub):
             return SubObfuscator::obfuscate(I);
         case (Instruction::SDiv):
-            return SDivObfuscator::obfuscate(I);
         case (Instruction::UDiv):
-            return UDivObfuscator::obfuscate(I);
+            return DivObfuscator::obfuscate(I);
         case (Instruction::Mul):
         case (Instruction::FMul):
             return MulObfuscator::obfuscate(I);
