@@ -4,12 +4,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "ConstantsEncoding.h"
+#include "ConstantEncoding/ConstantEncoding.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "const-encoding"
 
-bool ConstantsEncoding::runOnModule(Module &M) {
+bool ConstantEncoding::runOnModule(Module &M) {
 	// TODO: storing all instructions is a bad idea. Make it efficient.
 	//       Probable store all blocks. And store instructions only for each block.
 	ConstantInt *CI;
@@ -73,7 +73,7 @@ bool ConstantsEncoding::runOnModule(Module &M) {
 }
 
 // Registering the pass
-char ConstantsEncoding::ID = 0;
-static RegisterPass<ConstantsEncoding> X("const-encoding", "Obfuscates string constants");
+char ConstantEncoding::ID = 0;
+static RegisterPass<ConstantEncoding> X("const-encoding", "Obfuscates string constants");
 
 #undef DEBUG_TYPE

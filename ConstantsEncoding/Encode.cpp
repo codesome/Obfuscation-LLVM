@@ -3,7 +3,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "ConstantsEncoding.h"
+#include "ConstantEncoding/ConstantEncoding.h"
 using namespace llvm;
 
 

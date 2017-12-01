@@ -9,7 +9,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/APInt.h"
-#include "IndirectAccess.h"
+#include "IndirectAccess/IndirectAccess.h"
 using namespace llvm;
 
 namespace {

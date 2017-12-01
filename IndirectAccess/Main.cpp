@@ -10,7 +10,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Transforms/Scalar/DCE.h"
-#include "IndirectAccess.h"
+#include "IndirectAccess/IndirectAccess.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "indirect-access"

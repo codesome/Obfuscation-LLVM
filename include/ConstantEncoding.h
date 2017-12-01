@@ -85,12 +85,12 @@ void decodeNumber(GlobalVariable* globalVar, Value *val, Instruction *I, int int
 
 } /* namespace BitEncodingAndDecoding */
 
-class ConstantsEncoding : public ModulePass {
+class ConstantEncoding : public ModulePass {
 
 public:
     static char ID;
 
-    ConstantsEncoding() : ModulePass(ID) {}
+    ConstantEncoding() : ModulePass(ID) {}
 
     bool runOnModule(Module &M);
 

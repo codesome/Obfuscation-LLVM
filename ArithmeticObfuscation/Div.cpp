@@ -1,6 +1,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "ArithmeticObfuscation.h"
+#include "ArithmeticObfuscation/ArithmeticObfuscation.h"
 using namespace llvm;
 
 bool DivObfuscator::obfuscate(Instruction *I) {

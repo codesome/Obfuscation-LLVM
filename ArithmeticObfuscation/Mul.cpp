@@ -1,7 +1,6 @@
-#include "ArithmeticObfuscation.h"
+#include "ArithmeticObfuscation/ArithmeticObfuscation.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-
 
 namespace {
 

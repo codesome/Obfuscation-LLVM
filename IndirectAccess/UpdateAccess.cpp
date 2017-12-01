@@ -1,7 +1,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
-#include "IndirectAccess.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "IndirectAccess/IndirectAccess.h"
 using namespace llvm;
 
 void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, Value *array, ScalarEvolution *SE) {
@@ -43,22 +43,19 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     Value *arrayIdx = Builder.CreateGEP(array, idxList);
     Value *indirectAccess = Builder.CreateLoad(arrayIdx);
     
-    //Replacing all the uses of previous iterator with new one
-    iterator->replaceAllUsesWith(indirectAccess);
-
     unsigned int iBits = iterator->getType()->getPrimitiveSizeInBits();
     if(iBits != IndirectAccessUtils::MAX_BITS) {
-
         Type* iOriginal = Type::getIntNTy(F->getContext(), iBits);
-        iterator = Builder.CreateTrunc(iterator, iOriginal);
+        indirectAccess = Builder.CreateTrunc(indirectAccess, iOriginal);
     }
-    Builder.CreateStore(iterator,arrayIdx);
+
+    //Replacing all the uses of previous iterator with new one
+    iterator->replaceAllUsesWith(indirectAccess);
 
     // Changing compare operand
     Value *tripcnt = latchBuilder.CreateLoad(tripcount);
     Value *cmpInst = latchBuilder.CreateICmpSLT(increment,tripcnt);
     Instruction* I = L->getLoopLatch()->getTerminator();
     I->setOperand(0,cmpInst);
-
 
 }

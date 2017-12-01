@@ -2,8 +2,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "ArithmeticObfuscation.h"
 #include "llvm/Support/CommandLine.h"
+#include "ArithmeticObfuscation/ArithmeticObfuscation.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "arith-obfus"
