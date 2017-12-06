@@ -38,7 +38,18 @@ int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 	return randomNumber;
 }
 
-
+namespace {
+int getRandomNBits() {
+	switch(rand()%3) {
+		case 0:
+			return 1;
+		case 1:
+			return 2;
+		default:
+			return 4;
+	}
+}
+}
 
 int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **newStringGlobalVar, int *stringLength, Module *M){
 
@@ -56,7 +67,7 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 	// len = length of string
 	int len = str.length();
 	// Number of bits which are obfuscated
-	int nBits  = 2;
+	int nBits  = getRandomNBits();
 	/* 
 		step = Number of steps taken. 
 		Each character is of size 8 bits, which is splitted into sets of size nBits.
@@ -138,7 +149,7 @@ int BitEncodingAndDecoding::encodeNumber(GlobalVariable **globalVar, long num, i
 
 
 	// Number of bits which are obfuscated
-	int nBits  = 4;
+	int nBits = getRandomNBits();
 
 	int len = integerBits/nBits;
 	char *encodedStr = new char[len+1];

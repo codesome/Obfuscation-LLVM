@@ -111,7 +111,7 @@ void populateBodyBitEncodingAndDecoding(IRBuilder<>* loopBodyBuilder, LLVMContex
         Value *globalVarLoad = loopBodyBuilder->CreateLoad(globalVarGEP);
         Value *orVal = loopBodyBuilder->CreateAnd(globalVarLoad, maskVal);
         Value *shift = loopBodyBuilder->CreateShl(orVal, ConstantInt::get(i8, i*nBits));
-        newStrLoad = loopBodyBuilder->CreateAdd(newStrLoad, shift);
+        newStrLoad = loopBodyBuilder->CreateXor(newStrLoad, shift);
         if(i!=nChar-1) {
             iterLoad = loopBodyBuilder->CreateAdd(iterLoad, one);
         }
