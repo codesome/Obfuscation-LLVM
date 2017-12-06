@@ -4,24 +4,28 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "ConstantEncoding/ConstantEncoding.h"
+#include <random>
 using namespace llvm;
 
+namespace {
+// Random number generator, better than rand()
+std::random_device rd;
+std::mt19937 engine(rd());
+std::uniform_int_distribution<int> gen(0,1<<30);
+}
 
 int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 
-	// Converting global variable to constant
+	// Getting the string value from the global variable
 	Constant* constValue = globalVar->getInitializer();
-	// Type casting from constant to constant data array
 	ConstantDataArray* result = cast<ConstantDataArray>(constValue);
-	
-	if(!result->isCString())
+	if(!result->isCString()) // We only consider C-strings (which ends with 0)
 		return CaesarCipher::INVALID;
-
-	// Storing the value of string in str
+	// The string in the global variable
 	std::string str = result->getAsCString();
 
 	// Getting random number
-	int randomNumber = rand() % 125 + 1;
+	int randomNumber = gen(engine) % 125 + 1;
 
 	// Encoding string by adding the random number in each character
 	int len = str.length();
@@ -40,7 +44,8 @@ int CaesarCipher::encode(GlobalVariable* globalVar, int *stringLength){
 
 namespace {
 int getRandomNBits() {
-	switch(rand()%3) {
+	return 4;
+	switch(gen(engine)%3) {
 		case 0:
 			return 1;
 		case 1:
@@ -109,7 +114,7 @@ int BitEncodingAndDecoding::encode(GlobalVariable* globalVar,GlobalVariable **ne
 			int pos = i*step+j;
 
 			// Generates random number from 1 to 127
-			int randomNumber = rand() % 127 + 1;
+			int randomNumber = gen(engine) % 127 + 1;
 
 			// Storing random number in encoded character
 			encodedStr[pos] = (char)randomNumber;
@@ -167,7 +172,7 @@ int BitEncodingAndDecoding::encodeNumber(GlobalVariable **globalVar, long num, i
 	for(int i=0;i<len;i++) {
 		lastnBits = char(num) & mask;
 
-		int randomNumber = rand() % 127 + 1;
+		int randomNumber = gen(engine) % 127 + 1;
 
 		encodedStr[i] = (char)randomNumber;
 

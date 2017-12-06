@@ -56,9 +56,9 @@ namespace ArithmeticObfuscationUtils {
  * @param Instruction *I, the instruction to obfuscate
  * @param double maxAllowedValue, the max allowed value for operands
  * @param {
- *        std::function<Value*(IRBuilder<>* ifThenBuilder, 
+ *        Value* (*ifThenCaller)(IRBuilder<>* ifThenBuilder, 
  *              Type* floatType, Value* aXX, Value* bXX, 
- *              Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat)> ifThenCaller,
+ *              Value* aYY, Value* bYY, Value* aXXFloat, Value* bXXFloat),
  *        This is a function called to build the if.then block
  *        @param:
  *            int64: aXX = int64(a), bXX = int64(b)
@@ -67,7 +67,7 @@ namespace ArithmeticObfuscationUtils {
  *        @return Value*, the result from if.then
  * }
  * @param { 
- *        std::function<Value*(IRBuilder<>* ifElseBuilder, Value* a, Value* b)> ifElseCaller,
+ *        Value* (*ifElseCaller)(IRBuilder<>* ifElseBuilder, Value* a, Value* b),
  *        This is a function called to build the if.else block
  *        @param
  *            floatType: a, b

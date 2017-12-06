@@ -106,6 +106,66 @@ void fixPhiNodesInBody(Loop *correct, Loop *toBeFixed) {
 
 } /* namespace */
 
+
+Value* IndirectAccessUtils::getIntegerIterator(Loop *L, ScalarEvolution *SE) {
+    // Getting the first induction phi
+    BasicBlock *preHeader = L->getLoopPreheader();
+    for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
+        InductionDescriptor ID;
+        if(InductionDescriptor::isInductionPHI(&phi, L, SE, ID)) {
+            Type *ty = phi.getType();
+            if(ty->isIntegerTy() && ty->getPrimitiveSizeInBits() <= IndirectAccessUtils::MAX_BITS)
+                return dyn_cast<Value>(&phi);
+        }
+    }
+    return nullptr;
+}
+
+void IndirectAccessUtils::clone(LoopSplitInfo *LSI, 
+    LoopInfo *LI, DominatorTree *DT) {
+    // This cloned loop is used to populate the array
+    LSI->clonedLoop = cloneLoop(LSI->originalLoop, LI, DT);
+}
+
+void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
+
+    BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
+    BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
+    
+    // Making all uses of instructions (except preheader and loop latch) to undef
+    // NOTE: Uses of phi nodes in the first BasicBlock of body are not made undef
+    //       as we need it for updating indirect access
+    // All instructions of rest of the BasicBlock in the body is made undef
+    bool firstBody = true;
+    for(BasicBlock *BB: LSI->clonedLoop->getBlocks()) {
+        if(BB!=preHeader && BB!=loopLatch) {
+            for(BasicBlock::iterator DI = BB->begin(); DI != BB->end();) {
+                Instruction *I = &*DI++;
+                if( BB->getTerminator()!=I && (!dyn_cast<PHINode>(I) || !firstBody)) {
+                    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+                    I->eraseFromParent();
+                }
+            }
+            firstBody = false;
+        }
+    }
+
+    fixPhiNodesInBody(LSI->clonedLoop, LSI->originalLoop);
+
+}
+
+Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
+    BasicBlock &entryBlock = F->getEntryBlock();
+    IRBuilder<> builder(entryBlock.getTerminator());
+
+    // Initialising array in loop pre header for indirect access
+    Type* iMAX = Type::getIntNTy(F->getContext(), IndirectAccessUtils::MAX_BITS);
+    AllocaInst* indirectAccessArray = builder.CreateAlloca(ArrayType::get(iMAX, size));
+    // indirectAccessArray->setAlignment(16);
+    return indirectAccessArray;
+}
+
+
 void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI, 
     Function *F,Value *indirectAccessArray, ScalarEvolution *SE) {
     
@@ -158,62 +218,4 @@ void IndirectAccessUtils::populateArray(LoopSplitInfo *LSI,
     // runtime trip count
     LSI->tripCountValue = cnt;
 
-}
-
-void IndirectAccessUtils::clone(LoopSplitInfo *LSI, 
-    LoopInfo *LI, DominatorTree *DT) {
-    // This cloned loop is used to populate the array
-    LSI->clonedLoop = cloneLoop(LSI->originalLoop, LI, DT);
-}
-
-void IndirectAccessUtils::clearClonedLoop(LoopSplitInfo *LSI) {
-
-    BasicBlock *preHeader = LSI->clonedLoop->getLoopPreheader();
-    BasicBlock *loopLatch = LSI->clonedLoop->getLoopLatch();
-    
-    // Making all uses of instructions (except preheader and loop latch) to undef
-    // NOTE: Uses of phi nodes in the first BasicBlock of body are not made undef
-    //       as we need it for updating indirect access
-    // All instructions of rest of the BasicBlock in the body is made undef
-    bool firstBody = true;
-    for(BasicBlock *BB: LSI->clonedLoop->getBlocks()) {
-        if(BB!=preHeader && BB!=loopLatch) {
-            for(BasicBlock::iterator DI = BB->begin(); DI != BB->end();) {
-                Instruction *I = &*DI++;
-                if( BB->getTerminator()!=I && (!dyn_cast<PHINode>(I) || !firstBody)) {
-                    I->replaceAllUsesWith(UndefValue::get(I->getType()));
-                    I->eraseFromParent();
-                }
-            }
-            firstBody = false;
-        }
-    }
-
-    fixPhiNodesInBody(LSI->clonedLoop, LSI->originalLoop);
-
-}
-
-Value* IndirectAccessUtils::getIntegerIterator(Loop *L, ScalarEvolution *SE) {
-    // Getting the first induction phi
-    BasicBlock *preHeader = L->getLoopPreheader();
-    for(PHINode &phi: preHeader->getUniqueSuccessor()->phis()) {
-        InductionDescriptor ID;
-        if(InductionDescriptor::isInductionPHI(&phi, L, SE, ID)) {
-            Type *ty = phi.getType();
-            if(ty->isIntegerTy() && ty->getPrimitiveSizeInBits() <= IndirectAccessUtils::MAX_BITS)
-                return dyn_cast<Value>(&phi);
-        }
-    }
-    return nullptr;
-}
-
-Value* IndirectAccessUtils::allocateArrayInEntryBlock(Function *F, int size) {
-    BasicBlock &entryBlock = F->getEntryBlock();
-    IRBuilder<> builder(entryBlock.getTerminator());
-
-    // Initialising array in loop pre header for indirect access
-    Type* iMAX = Type::getIntNTy(F->getContext(), IndirectAccessUtils::MAX_BITS);
-    AllocaInst* indirectAccessArray = builder.CreateAlloca(ArrayType::get(iMAX, size));
-    // indirectAccessArray->setAlignment(16);
-    return indirectAccessArray;
 }

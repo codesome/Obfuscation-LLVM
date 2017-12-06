@@ -5,9 +5,17 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "ConstantEncoding/ConstantEncoding.h"
+#include <random>
 using namespace llvm;
 
 #define DEBUG_TYPE "const-encoding"
+
+namespace {
+// Random number generator, better than rand()
+std::random_device rd;
+std::mt19937 engine(rd());
+std::uniform_int_distribution<int> gen(0,1<<30);
+}
 
 bool ConstantEncoding::runOnModule(Module &M) {
 	// TODO: storing all instructions is a bad idea. Make it efficient.
@@ -50,7 +58,7 @@ bool ConstantEncoding::runOnModule(Module &M) {
 	int stringLength;
 	for(GlobalVariable *globalVar : gvs) {
 		if(globalVar->isConstant() && globalVar->hasInitializer()) {
-			if(rand()%2) {
+			if(gen(engine)%2) {
 				// Caesar
 				int offset = CaesarCipher::encode(globalVar, &stringLength);
 				if(offset != CaesarCipher::INVALID)

@@ -6,5 +6,5 @@ add_llvm_loadable_module(ArithmeticObfuscation
 	Mul.cpp	
 	Div.cpp
 	ArithmeticObfuscationUtils.cpp
-	Main.cpp
+	ArithmeticObfuscation.cpp
 )
