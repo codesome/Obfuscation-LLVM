@@ -4,7 +4,6 @@
 #include "llvm/Support/Debug.h"
 #include "ArithmeticObfuscation/ArithmeticObfuscation.h"
 
-
 using namespace llvm;
 
 namespace {

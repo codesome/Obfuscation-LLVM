@@ -9,7 +9,7 @@ $ git clone https://github.com/thecodesome/Obfuscation-LLVM.git Obfuscation
 
 $ cd $LLVM_BUILD
 # run your cmake command
-$ make -j{NUM_PROCS} ArithmeticObfuscation IndirectAccess ConstantsEncoding
+$ make -j{NUM_PROCS} ArithmeticObfuscation IndirectAccess ConstantEncoding
 
 ```
 ### Passes
@@ -30,7 +30,7 @@ Load `$LLVM_BUILD/lib/IndirectAccess.so` and use `-loop-rotate -indirect-access`
 
 NOTE: `loop-rotate` should be used before `indirect-access`
 
-#### 3. Constants Encoding `-const-encoding`
+#### 3. Constant Encoding `-const-encoding`
 
-Load `$LLVM_BUILD/lib/ConstantsEncoding.so` and use `-const-encoding` flag.
+Load `$LLVM_BUILD/lib/ConstantEncoding.so` and use `-const-encoding` flag.
 

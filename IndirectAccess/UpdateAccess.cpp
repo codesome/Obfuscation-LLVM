@@ -15,22 +15,17 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     BasicBlock *preHeader = L->getLoopPreheader(); // Loop preheader
     BasicBlock *loopLatch = L->getLoopLatch();  // Loop latch
 
-
-    // Creating a new variable to iterate loop initialized with 0
+    // Creating a new variable to iterate loop, initialized with 0
     Type* i32 = Type::getInt32Ty(F->getContext());
     Value* zero = ConstantInt::get(i32, 0);
 
-
+    // Adding out phi node for iteration in the begining of the loop body
     IRBuilder<> Builder(preHeader->getUniqueSuccessor()->getFirstNonPHI());
-
-
     PHINode *phi = Builder.CreatePHI(i32, 2);
     phi->addIncoming(zero, preHeader);
-    
-    
+
+    // For incrementing the iterator and changing conditions of loop
     IRBuilder<> latchBuilder(loopLatch->getTerminator());
-    
-    /*Adding phi intruction to for compare operator*/
     Value* one = ConstantInt::get(i32, 1);
     Value *increment = latchBuilder.CreateAdd(phi, one);
     phi->addIncoming(increment,loopLatch);
@@ -43,8 +38,10 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     Value *arrayIdx = Builder.CreateGEP(array, idxList);
     Value *indirectAccess = Builder.CreateLoad(arrayIdx);
     
+    // Fixing the bits in the integer
     unsigned int iBits = iterator->getType()->getPrimitiveSizeInBits();
     if(iBits != IndirectAccessUtils::MAX_BITS) {
+        // integer was smaller, hence truncate
         Type* iOriginal = Type::getIntNTy(F->getContext(), iBits);
         indirectAccess = Builder.CreateTrunc(indirectAccess, iOriginal);
     }
@@ -52,7 +49,7 @@ void IndirectAccessUtils::updateIndirectAccess(LoopSplitInfo* LSI, Function* F, 
     //Replacing all the uses of previous iterator with new one
     iterator->replaceAllUsesWith(indirectAccess);
 
-    // Changing compare operand
+    // Changing compare imstruction of the loop
     Value *tripcnt = latchBuilder.CreateLoad(tripcount);
     Value *cmpInst = latchBuilder.CreateICmpSLT(increment,tripcnt);
     Instruction* I = L->getLoopLatch()->getTerminator();
