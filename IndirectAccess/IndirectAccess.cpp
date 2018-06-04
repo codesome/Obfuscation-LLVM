@@ -26,11 +26,12 @@ namespace {
  * @param std::vector<LoopSplitInfo*> *lsi, vector in which 
  *             innermost loops are pushed
  *___________________________________________________________*/
-void getInnerMostLoops(Loop *L, std::vector<LoopSplitInfo*> *lsi) {
+void getInnerMostLoops(Loop *L, std::vector<LoopSplitInfo*> *lsi, int *loopCounter) {
+    *loopCounter = (*loopCounter) + 1;
     bool containsNestedLoops = false;
     for (Loop *NL : *L) {
         containsNestedLoops = true;
-        getInnerMostLoops(NL, lsi);
+        getInnerMostLoops(NL, lsi, loopCounter);
     }
     // Splitting only if loop doesn't have nested loop
     if(!containsNestedLoops) {
@@ -42,7 +43,6 @@ void getInnerMostLoops(Loop *L, std::vector<LoopSplitInfo*> *lsi) {
 } /* namespace */
 
 bool IndirectAccess::runOnFunction(Function &F) {
-    bool modified = true;
 
     legacy::FunctionPassManager FPM(F.getParent());
     FPM.add(createLoopSimplifyPass());
@@ -53,10 +53,11 @@ bool IndirectAccess::runOnFunction(Function &F) {
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
+    int totalLoops = 0, totalInnermostLoops = 0, transformedLoops = 0;
     // This vector will be filled with the inner most loops
     std::vector<LoopSplitInfo*> lsi;
     for (Loop *L : LI) {
-        getInnerMostLoops(L, &lsi);
+        getInnerMostLoops(L, &lsi, &totalLoops);
     }
 
 
@@ -67,6 +68,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
     
     int tripCount;
     for(LoopSplitInfo *LSI : lsi) {
+        totalInnermostLoops++;
         if(IndirectAccessUtils::isLegalTransform(LSI->originalLoop, &SE)) {
             tripCount = SE.getSmallConstantTripCount(LSI->originalLoop);
             if(tripCount > maxTripCount) {
@@ -90,6 +92,7 @@ bool IndirectAccess::runOnFunction(Function &F) {
             IndirectAccessUtils::populateArray(LSI, &F, array, &SE);
             // replace uses of insuction variable with indirect access in original loop
             IndirectAccessUtils::updateIndirectAccess(LSI, &F, array, &SE);
+            transformedLoops++;
         }
 
         // dead instructions will be created while clearing cloned loop
@@ -98,7 +101,12 @@ bool IndirectAccess::runOnFunction(Function &F) {
         FPM.run(F);
     }
 
-    return modified;
+    dbgs() << "\nTotal loops (outer+inner): " << totalLoops << "\n";;
+    dbgs() << "Total inner loops: " << totalInnermostLoops << "\n";;
+    dbgs() << "Transformed inner loops: " << transformedLoops << "\n";;
+    dbgs() << "% (inner): " << (totalInnermostLoops>0? (transformedLoops*100.0)/totalInnermostLoops: 0) << "\n\n";;
+
+    return transformedLoops>0;
 }
 
 void IndirectAccess::getAnalysisUsage(AnalysisUsage &AU) const {

@@ -347,7 +347,11 @@ void inlineDecode(bool isCaesar, bool isNumber, GlobalVariable *globalVar, int l
         II->insertAfter(next);
         next = II;
     }
-    originalValue->replaceAllUsesWith(newStrGEP);
+    for(User *uu: originalValue->users()) {
+        if(I==dyn_cast<Instruction>(uu)) {
+            uu->replaceUsesOfWith(originalValue, newStrGEP);
+        }
+    }
 }
 
 /*___________________________________________________________________________
